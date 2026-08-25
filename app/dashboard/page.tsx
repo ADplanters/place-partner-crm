@@ -19,8 +19,6 @@ import {
   Folder,
   GraduationCap,
   Users,
-  CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -141,10 +139,10 @@ export default function DashboardPage() {
             <button onClick={() => router.push("/contracts")} className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all ${isDarkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-50 text-gray-600"}`}>
               <FileText size={18} /> 계약 관리
             </button>
-            <button className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all ${isDarkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-50 text-gray-600"}`}>
+            <button onClick={() => router.push("/forms")} className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all ${isDarkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-50 text-gray-600"}`}>
               <Folder size={18} /> 서식 모음
             </button>
-            <button className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all ${isDarkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-50 text-gray-600"}`}>
+            <button onClick={() => router.push("/education")} className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all ${isDarkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-50 text-gray-600"}`}>
               <GraduationCap size={18} /> 교육 자료
             </button>
             <button onClick={() => router.push("/team")} className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all ${isDarkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-50 text-gray-600"}`}>
