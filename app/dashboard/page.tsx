@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { auth, db } from "../firebase";
+import { auth, db } from "../../firebase"; // 5번째 줄: 루트 경로("../../firebase") 적용
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
