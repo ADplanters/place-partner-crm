@@ -4,7 +4,14 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "../firebase";
 import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+
+// 🌟 슈퍼 관리자 영구 등록 이메일 목록
+const ADMIN_EMAILS = [
+  "adp@adplanters.com",
+  "hhjhhj422@gmail.com",
+  "hhjhhj422@gamil.com", // 오타 입력 방지용 포함
+];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,21 +25,41 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
+      if (!user.email) {
+        alert("이메일 정보가 없는 계정입니다.");
+        return;
+      }
+
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
+      const isAdminEmail = ADMIN_EMAILS.includes(user.email);
+
       if (!userSnap.exists()) {
+        const initialRole = isAdminEmail ? "admin" : "pending";
         await setDoc(userRef, {
           uid: user.uid,
           name: user.displayName || "이름 없음",
           email: user.email,
-          role: "pending",
-          team: "미배정",
+          role: initialRole,
+          team: isAdminEmail ? "본사/관리자" : "미배정",
           createdAt: serverTimestamp(),
         });
-        setIsPending(true);
+
+        if (initialRole === "pending") {
+          setIsPending(true);
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         const userData = userSnap.data();
+
+        if (isAdminEmail && userData.role === "pending") {
+          await updateDoc(userRef, { role: "admin", team: "본사/관리자" });
+          router.push("/dashboard");
+          return;
+        }
+
         if (userData.role === "pending") {
           setIsPending(true);
         } else {
@@ -41,7 +68,6 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error("로그인 에러:", error);
-      // 팝업을 직접 닫거나 요청이 취소된 경우에는 알림창을 띄우지 않음
       if (
         error.code !== "auth/popup-closed-by-user" &&
         error.code !== "auth/cancelled-popup-request"
