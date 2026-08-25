@@ -19,9 +19,9 @@ export default function DashboardPage() {
   const [currentMonth, setCurrentMonth] = useState(8);
   const [contracts, setContracts] = useState<ContractItem[]>([]);
 
-  // 목표 금액 설정 (기본값)
-  const [yearlyTarget, setYearlyTarget] = useState(100000000); // 1억원
-  const [monthlyTarget, setMonthlyTarget] = useState(500000); // 50만원
+  // 🎯 목표 금액 설정 (정상가 360만원 x 30건 기준)
+  const [monthlyTarget, setMonthlyTarget] = useState(108000000); // 월 1억 800만원
+  const [yearlyTarget, setYearlyTarget] = useState(1296000000);  // 연 12억 9,600만원
 
   // DB에서 계약 목록 불러오기
   const fetchContracts = async () => {
@@ -73,15 +73,14 @@ export default function DashboardPage() {
   // 선택된 당월 매출
   const currentMonthRevenue = monthlyRevenues[currentMonth - 1] || 0;
 
-  // 🎯 그래프 높이 스케일링을 위한 최고 매출액 계산 (최소 3,000,000원)
-  const maxRevenue = Math.max(...monthlyRevenues, 3000000);
+  // 🎯 그래프 최대 높이 스케일 (월 목표 1억 8,000만 원 또는 실제 최고 실적 기준)
+  const maxRevenue = Math.max(...monthlyRevenues, monthlyTarget);
 
   // 달성률 계산
   const yearlyProgress = Math.min((yearlyTotal / yearlyTarget) * 100, 100).toFixed(1);
   const monthlyProgress = Math.min((currentMonthRevenue / monthlyTarget) * 100, 100).toFixed(1);
   const remainingMonthly = Math.max(monthlyTarget - currentMonthRevenue, 0);
 
-  // 연월 이동 컨트롤러
   const handlePrevMonth = () => {
     if (currentMonth === 1) {
       setCurrentYear((prev) => prev - 1);
@@ -194,7 +193,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 🌟 계약 총 매출 추이 (MONTHLY) 막대 그래프 영역 */}
+          {/* 계약 총 매출 추이 (MONTHLY) 막대 그래프 영역 */}
           <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -202,7 +201,7 @@ export default function DashboardPage() {
                 계약 총 매출 추이 (MONTHLY) - {currentYear}년
               </h2>
               <span className="text-[11px] font-bold text-gray-400">
-                * DB 계약 시작일 기준 실시간 집계
+                * 월 목표(360만 원 × 30건 = 1억 800만 원) 스케일 기준 실시간 집계
               </span>
             </div>
 
@@ -213,8 +212,8 @@ export default function DashboardPage() {
                   const monthNum = idx + 1;
                   const isCurrentSelected = monthNum === currentMonth;
                   
-                  // 🎯 매출액 기준 높이 비율 계산 (매출이 있으면 최소 12% 높이 보장)
-                  const heightPercent = amount > 0 ? Math.max((amount / maxRevenue) * 100, 12) : 0;
+                  // 🎯 실제 비율 계산 (2,400,000 / 108,000,000 = 약 2.2%, 최소 높이 3% 적용)
+                  const heightPercent = amount > 0 ? Math.max((amount / maxRevenue) * 100, 3) : 0;
 
                   return (
                     <div
@@ -228,7 +227,7 @@ export default function DashboardPage() {
                         </div>
                       )}
 
-                      {/* 🎯 막대 바 (보이도록 높이 및 배경 트랙 적용) */}
+                      {/* 막대 바 */}
                       <div className="w-full max-w-[40px] bg-gray-50 rounded-t-2xl h-full flex items-end overflow-hidden p-1">
                         <div
                           className={`w-full rounded-t-xl transition-all duration-700 ease-out ${
