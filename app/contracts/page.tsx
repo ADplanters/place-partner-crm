@@ -82,7 +82,6 @@ export default function ContractsPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // DB 데이터 불러오기
   const fetchData = async () => {
     try {
       const usersSnap = await getDocs(collection(db, "users"));
@@ -129,7 +128,6 @@ export default function ContractsPage() {
     return () => unsubscribe();
   }, []);
 
-  // 신규 계약 등록
   const handleCreateContract = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newContract.clientName.trim()) {
@@ -204,7 +202,6 @@ export default function ContractsPage() {
     }
   };
 
-  // 🎯 ts(2362) 완벽 해결: number 검증 강화
   const handlePrevMonth = () => {
     if (typeof currentMonth === "number") {
       if (currentMonth === 1) {
@@ -220,7 +217,6 @@ export default function ContractsPage() {
     }
   };
 
-  // 🎯 ts(2365) 완벽 해결: number 검증 강화
   const handleNextMonth = () => {
     if (typeof currentMonth === "number") {
       if (currentMonth === 12) {
@@ -258,7 +254,6 @@ export default function ContractsPage() {
 
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-[1500px] mx-auto">
-          {/* 헤더 */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-black flex items-center gap-2">
@@ -326,7 +321,6 @@ export default function ContractsPage() {
             </button>
           </div>
 
-          {/* 서치 및 정보 */}
           <div className="flex items-center justify-between p-4 mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
             <div className="text-sm font-bold text-gray-700">
               현재 등록된 DB 데이터 수: <span className="text-blue-600">{filteredContracts.length}건</span>
@@ -344,7 +338,6 @@ export default function ContractsPage() {
             </div>
           </div>
 
-          {/* 테이블 */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
             <table className="w-full text-left text-xs text-gray-600 min-w-[1300px]">
               <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100">
@@ -625,9 +618,10 @@ export default function ContractsPage() {
                 <label className="block text-xs font-bold text-gray-500 mb-1.5">고객사명 (업체명)</label>
                 <div className="relative">
                   <Building2 className="absolute left-3.5 top-3 text-gray-400" size={16} />
+                  {/* 🌟 플레이스 파트너 예시 적용 */}
                   <input
                     type="text"
-                    placeholder="예: 피부튼튼 마곡점"
+                    placeholder="예: 플레이스 파트너"
                     value={newContract.clientName}
                     onChange={(e) => setNewContract({ ...newContract, clientName: e.target.value })}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:border-blue-600"
