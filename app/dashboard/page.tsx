@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "../components/Sidebar";
+import Sidebar from "../components/Sidebar"; // 🌟 여기서 공통 사이드바를 불러오고 있습니다.
 import { auth, db } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
