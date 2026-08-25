@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC35JUgxgVlfsOQQUSGbu91eOGWSvpPHs", // <- 대문자 J로 정확히 수정됨
+  apiKey: "AIzaSyC35jUgxgVlfsOQQUSGbu91eOGWVSvpPHs",
   authDomain: "placepartnercrm.firebaseapp.com",
   projectId: "placepartnercrm",
   storageBucket: "placepartnercrm.firebasestorage.app",
