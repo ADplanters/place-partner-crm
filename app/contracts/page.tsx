@@ -31,6 +31,15 @@ interface ContractItem {
   note: string;
 }
 
+// 판매 상품 고정 리스트
+const PRODUCT_OPTIONS = [
+  "플레이스파트너 스탠다드",
+  "플레이스파트너 VIP",
+  "영상 제작",
+  "웹사이트",
+  "인플루언서 마케팅",
+];
+
 export default function ContractsPage() {
   const monthPickerRef = useRef<HTMLDivElement>(null);
 
@@ -40,6 +49,7 @@ export default function ContractsPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const [contracts, setContracts] = useState<ContractItem[]>([]);
+  const [managersList, setManagersList] = useState<string[]>([]); // DB 팀원 리스트
 
   // 수정 모드 상태
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -56,9 +66,19 @@ export default function ContractsPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // DB에서 계약 목록 불러오기
-  const fetchContracts = async () => {
+  // DB에서 담당자(팀원) 및 계약 목록 불러오기
+  const fetchData = async () => {
     try {
+      // 1. 팀원 목록 가져오기
+      const usersSnap = await getDocs(collection(db, "users"));
+      const userNames: string[] = [];
+      usersSnap.forEach((docSnap) => {
+        const u = docSnap.data();
+        if (u.name) userNames.push(u.name);
+      });
+      setManagersList(userNames);
+
+      // 2. 계약 목록 가져오기
       const querySnapshot = await getDocs(collection(db, "contracts"));
       const list: ContractItem[] = [];
       querySnapshot.forEach((docSnap) => {
@@ -68,10 +88,10 @@ export default function ContractsPage() {
           startDate: d.startDate || d.contractStartDate || "2026-08-25",
           endDate: d.endDate || d.contractEndDate || "2027-08-24",
           type: d.type || "인바운드",
-          manager: d.manager || "매니저 1",
+          manager: d.manager || (userNames[0] || "매니저 1"),
           status: d.status || "결제완료",
           clientName: d.clientName || d.companyName || "고객사",
-          productName: d.productName || "스마트플레이스",
+          productName: d.productName || "플레이스파트너 스탠다드",
           amount: Number(d.amount || d.contractAmount || 0),
           paymentMethod: d.paymentMethod || "현금",
           taxInvoice: d.taxInvoice || "미발행",
@@ -80,13 +100,13 @@ export default function ContractsPage() {
       });
       setContracts(list);
     } catch (error) {
-      console.error("계약 데이터 불러오기 실패:", error);
+      console.error("데이터 불러오기 실패:", error);
     }
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) fetchContracts();
+      if (user) fetchData();
     });
     return () => unsubscribe();
   }, []);
@@ -131,7 +151,6 @@ export default function ContractsPage() {
     }
   };
 
-  // 이전 월 이동
   const handlePrevMonth = () => {
     if (typeof currentMonth !== "number" || currentMonth === 1) {
       setCurrentMonth(12);
@@ -142,7 +161,6 @@ export default function ContractsPage() {
     }
   };
 
-  // 다음 월 이동
   const handleNextMonth = () => {
     if (typeof currentMonth !== "number") {
       setCurrentMonth(1);
@@ -155,7 +173,6 @@ export default function ContractsPage() {
     }
   };
 
-  // 계약 시작 월 필터링 + 검색 + 내림차순 정렬
   const filteredContracts = contracts
     .filter((item) => {
       const matchesSearch =
@@ -189,7 +206,6 @@ export default function ContractsPage() {
                 <FileText className="text-blue-600" size={24} /> 계약 관리
               </h1>
 
-              {/* 월 선택 드롭다운 */}
               <div className="relative" ref={monthPickerRef}>
                 <div className="flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-xl font-bold text-sm shadow-sm">
                   <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 rounded-lg">
@@ -277,10 +293,10 @@ export default function ContractsPage() {
                   <th className="p-3 w-10 text-center"></th>
                   <th className="p-3 w-56">계약기간(시작~종료)</th>
                   <th className="p-3 w-24">유형</th>
-                  <th className="p-3 w-24">담당자</th>
+                  <th className="p-3 w-28">담당자</th>
                   <th className="p-3 w-28">상태</th>
                   <th className="p-3 w-32">고객사(업체명)</th>
-                  <th className="p-3 w-32">판매 상품</th>
+                  <th className="p-3 w-40">판매 상품</th>
                   <th className="p-3 w-28">계약 금액</th>
                   <th className="p-3 w-20">결제수단</th>
                   <th className="p-3 w-24">세금계산서</th>
@@ -323,7 +339,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 🎯 계약기간: 시작일과 종료일을 모두 입력할 수 있도록 보완 */}
                         <td className="p-3 text-gray-500 whitespace-nowrap">
                           {isEditing ? (
                             <div className="flex items-center gap-1">
@@ -332,7 +347,6 @@ export default function ContractsPage() {
                                 value={editForm.startDate || ""}
                                 onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
                                 className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500"
-                                placeholder="YYYY-MM-DD"
                               />
                               <span className="text-gray-400 font-bold">~</span>
                               <input
@@ -340,7 +354,6 @@ export default function ContractsPage() {
                                 value={editForm.endDate || ""}
                                 onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
                                 className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500"
-                                placeholder="YYYY-MM-DD"
                               />
                             </div>
                           ) : (
@@ -366,14 +379,24 @@ export default function ContractsPage() {
                           )}
                         </td>
 
+                        {/* 🎯 담당자 드롭다운 (팀원 DB 연동) */}
                         <td className="p-3">
                           {isEditing ? (
-                            <input
-                              type="text"
+                            <select
                               value={editForm.manager || ""}
                               onChange={(e) => setEditForm({ ...editForm, manager: e.target.value })}
-                              className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                            />
+                              className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                            >
+                              {managersList.length > 0 ? (
+                                managersList.map((m) => (
+                                  <option key={m} value={m}>
+                                    {m}
+                                  </option>
+                                ))
+                              ) : (
+                                <option value={editForm.manager}>{editForm.manager}</option>
+                              )}
+                            </select>
                           ) : (
                             item.manager
                           )}
@@ -414,14 +437,20 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        <td className="p-3 text-blue-600 font-bold">
+                        {/* 🎯 판매 상품 드롭다운 (고정 5종 지정) */}
+                        <td className="p-3 font-bold text-blue-600">
                           {isEditing ? (
-                            <input
-                              type="text"
-                              value={editForm.productName || ""}
+                            <select
+                              value={editForm.productName || PRODUCT_OPTIONS[0]}
                               onChange={(e) => setEditForm({ ...editForm, productName: e.target.value })}
-                              className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                            />
+                              className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none text-blue-600"
+                            >
+                              {PRODUCT_OPTIONS.map((prod) => (
+                                <option key={prod} value={prod}>
+                                  {prod}
+                                </option>
+                              ))}
+                            </select>
                           ) : (
                             item.productName
                           )}
