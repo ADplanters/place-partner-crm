@@ -39,9 +39,15 @@ export default function LoginPage() {
           router.push("/dashboard");
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("로그인 에러:", error);
-      alert("로그인 중 오류가 발생했습니다.");
+      // 팝업을 직접 닫거나 요청이 취소된 경우에는 알림창을 띄우지 않음
+      if (
+        error.code !== "auth/popup-closed-by-user" &&
+        error.code !== "auth/cancelled-popup-request"
+      ) {
+        alert("로그인 중 오류가 발생했습니다.");
+      }
     } finally {
       setIsLoading(false);
     }
