@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { auth, db } from "../../firebase";
+import { auth, db } from "../firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
@@ -19,7 +19,6 @@ import {
   Folder,
   GraduationCap,
   Users,
-  Coffee,
   Globe,
 } from "lucide-react";
 
@@ -157,7 +156,7 @@ export default function DashboardPage() {
           </nav>
         </div>
 
-        {/* 사이드바 하단 (다크모드 / 알림 / 카페 & 홈페이지 바로가기 / 프로필) */}
+        {/* 사이드바 하단 (다크모드 / 알림 / 네이버 카페 & 홈페이지 바로가기 / 프로필) */}
         <div className="space-y-4 relative">
           <div className="flex items-center gap-2">
             {/* 다크모드 버튼 */}
@@ -181,15 +180,17 @@ export default function DashboardPage() {
               )}
             </button>
 
-            {/* 네이버 플레이스 파트너 카페 링크 */}
+            {/* 네이버 플레이스 파트너 카페 링크 (네이버 N 로고 적용) */}
             <a
               href="https://cafe.naver.com/bluebottlefollower"
               target="_blank"
               rel="noopener noreferrer"
-              className={`p-2.5 rounded-full transition-all ${isDarkMode ? "bg-gray-700 text-green-400 hover:bg-gray-600" : "bg-green-50 text-green-600 hover:bg-green-100"}`}
+              className={`p-2.5 rounded-full transition-all flex items-center justify-center ${isDarkMode ? "bg-gray-700 text-green-400 hover:bg-gray-600" : "bg-green-50 text-[#03C75A] hover:bg-green-100"}`}
               title="네이버 플레이스 파트너 카페"
             >
-              <Coffee size={18} />
+              <svg className="w-[18px] h-[18px] fill-current" viewBox="0 0 24 24">
+                <path d="M16.273 12.845L7.376 0H0v24h7.727v-12.845L16.624 24H24V0h-7.727v12.845z" />
+              </svg>
             </a>
 
             {/* 애드플랜터스 홈페이지 링크 */}
