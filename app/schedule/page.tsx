@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { auth, db } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -26,7 +26,7 @@ interface ScheduleEvent {
   memo?: string;
 }
 
-// 🎯 실무 맞춤형 색상 태그 기획 (대면영업, 가망건, 2차콜, 임시보류, 계약/중요)
+// 🎯 실무 맞춤형 색상 태그 기획 (이 부분이 반영되어야 합니다!)
 const COLOR_OPTIONS = [
   { label: "대면영업", value: "bg-purple-100 text-purple-700 border-purple-200" },
   { label: "가망건", value: "bg-blue-100 text-blue-700 border-blue-200" },
@@ -403,7 +403,7 @@ export default function SchedulePage() {
                 />
               </div>
 
-              {/* 🎯 기획된 영업 상태 태그 선택 */}
+              {/* 🎯 기획된 영업 상태 태그 선택 (버튼 형식) */}
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1.5">영업 상태 태그</label>
                 <div className="flex flex-wrap gap-1.5">
@@ -455,7 +455,7 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* 🌟 2. 일정 클릭 시 오픈되는 상세 / 수정 / 삭제 모달 */}
+      {/* 🌟 2. 일정 상세 / 수정 / 삭제 모달 */}
       {isDetailModalOpen && selectedEvent && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="w-full max-w-md p-6 bg-white rounded-3xl border border-gray-100 shadow-2xl text-gray-900">
