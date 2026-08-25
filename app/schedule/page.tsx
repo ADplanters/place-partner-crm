@@ -98,7 +98,7 @@ export default function SchedulePage() {
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA]">
-      <Sidebar />
+      <Sidebar currentMenu="schedule"/>
 
       <main className="relative flex-1 p-8">
         {/* 상단 헤더 */}
