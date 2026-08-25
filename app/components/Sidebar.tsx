@@ -16,8 +16,9 @@ import {
   FileText,
   Folder,
   GraduationCap,
-  Users,
+  Users as UsersIcon,
   Globe,
+  User
 } from "lucide-react";
 
 interface SidebarProps {
@@ -34,7 +35,6 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
 
-  // 알림창 바깥 영역 클릭 시 자동으로 닫기
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
@@ -45,12 +45,9 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 실제 DB 알림 데이터 조회 (가입 승인 대기 유저 + 최근 계약 건)
   const fetchRealNotifications = async () => {
     try {
       const realNotifs: any[] = [];
-
-      // 1. 가입 승인 대기 중인 사용자
       const pendingSnap = await getDocs(query(collection(db, "users"), where("role", "==", "pending")));
       pendingSnap.forEach((docSnap) => {
         const u = docSnap.data();
@@ -63,7 +60,6 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
         });
       });
 
-      // 2. 최근 체결된 계약 데이터
       const contractsSnap = await getDocs(query(collection(db, "contracts"), limit(5)));
       contractsSnap.forEach((docSnap) => {
         const c = docSnap.data();
@@ -80,7 +76,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
 
       setNotifications(realNotifs);
     } catch (error) {
-      console.error("알림 로딩 오류:", error);
+      console.error("알림 로딩 실패:", error);
     }
   };
 
@@ -116,22 +112,22 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
     { key: "contracts", label: "계약 관리", icon: FileText, path: "/contracts" },
     { key: "forms", label: "서식 모음", icon: Folder, path: "/forms" },
     { key: "education", label: "교육 자료", icon: GraduationCap, path: "/education" },
-    { key: "team", label: "팀원 관리", icon: Users, path: "/team" },
+    { key: "team", label: "팀원 관리", icon: UsersIcon, path: "/team" },
   ];
 
   return (
     <aside className={`w-64 border-r flex flex-col justify-between p-6 ${isDarkMode ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-100 text-gray-900"}`}>
       <div>
-        {/* 로고 클릭 시 대시보드 이동 */}
+        {/* 🔥 로고 디자인 원상복구 (별표 중앙 정렬) */}
         <div
           onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-2 mb-10 cursor-pointer hover:opacity-80 transition-opacity"
+          className="flex items-center gap-1.5 mb-10 cursor-pointer hover:opacity-80 transition-opacity"
+          title="대시보드 홈으로 이동"
         >
-          <span className="text-3xl font-black text-red-600">*</span>
+          <span className="text-3xl font-black text-red-600 relative top-1 leading-[0]">*</span>
           <span className="text-xl font-black text-red-600 tracking-tight">PLACE PARTNER</span>
         </div>
 
-        {/* 네비게이션 메뉴 */}
         <nav className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -155,23 +151,18 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
         </nav>
       </div>
 
-      {/* 하단 제어 및 알림창 (외부 클릭 자동 닫기 적용) */}
       <div className="space-y-4 relative" ref={notificationRef}>
         <div className="flex items-center gap-2">
-          {/* 다크모드 토글 */}
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className={`p-2.5 rounded-full transition-all ${isDarkMode ? "bg-gray-700 text-yellow-400" : "bg-gray-100 text-gray-600"}`}
-            title="다크모드"
           >
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          {/* 알림창 버튼 */}
           <button
             onClick={() => setIsNotificationOpen(!isNotificationOpen)}
             className={`relative p-2.5 rounded-full transition-all ${isDarkMode ? "bg-gray-700 text-gray-200" : "bg-gray-100 text-gray-600"}`}
-            title="알림창"
           >
             <Bell size={18} />
             {unreadCount > 0 && (
@@ -179,32 +170,27 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
             )}
           </button>
 
-          {/* 네이버 카페 링크 */}
           <a
             href="https://cafe.naver.com/bluebottlefollower"
             target="_blank"
             rel="noopener noreferrer"
             className={`p-2.5 rounded-full transition-all flex items-center justify-center ${isDarkMode ? "bg-gray-700 text-green-400" : "bg-green-50 text-[#03C75A]"}`}
-            title="네이버 카페 바로가기"
           >
             <svg className="w-[18px] h-[18px] fill-current" viewBox="0 0 24 24">
               <path d="M16.273 12.845L7.376 0H0v24h7.727v-12.845L16.624 24H24V0h-7.727v12.845z" />
             </svg>
           </a>
 
-          {/* 공식 홈페이지 링크 */}
           <a
             href="https://www.adplanters.com/"
             target="_blank"
             rel="noopener noreferrer"
             className={`p-2.5 rounded-full transition-all ${isDarkMode ? "bg-gray-700 text-blue-400" : "bg-blue-50 text-blue-600"}`}
-            title="공식 홈페이지 바로가기"
           >
             <Globe size={18} />
           </a>
         </div>
 
-        {/* 알림 팝업 창 */}
         {isNotificationOpen && (
           <div className={`absolute bottom-16 left-0 w-80 rounded-2xl border shadow-xl p-4 z-50 transition-all ${isDarkMode ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-100 text-gray-900"}`}>
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-700">
@@ -220,7 +206,6 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
                 모두 읽음
               </button>
             </div>
-
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {notifications.length === 0 ? (
                 <div className="text-xs text-gray-400 text-center py-4">새로운 알림이 없습니다.</div>
@@ -244,11 +229,11 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
           </div>
         )}
 
-        {/* 유저 프로필 및 로그아웃 */}
+        {/* 🔥 프로필 디자인 원상복구 (유저 아이콘) */}
         <div className={`flex items-center justify-between p-3 rounded-2xl border ${isDarkMode ? "bg-gray-700/50 border-gray-700" : "bg-gray-50 border-gray-100"}`}>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-              {userName.slice(0, 1)}
+            <div className="w-8 h-8 rounded-full bg-blue-100/50 text-blue-600 flex items-center justify-center">
+              <User size={16} strokeWidth={2.5} />
             </div>
             <div>
               <div className="text-xs font-bold">{userName}</div>
