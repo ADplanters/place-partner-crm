@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { auth, db } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
 import {
   FileText,
   Plus,
@@ -14,6 +14,8 @@ import {
   MinusCircle,
   Save,
   X,
+  Building2,
+  DollarSign,
 } from "lucide-react";
 
 interface ContractItem {
@@ -31,7 +33,6 @@ interface ContractItem {
   note: string;
 }
 
-// 판매 상품 고정 리스트
 const PRODUCT_OPTIONS = [
   "플레이스파트너 스탠다드",
   "플레이스파트너 VIP",
@@ -49,13 +50,28 @@ export default function ContractsPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const [contracts, setContracts] = useState<ContractItem[]>([]);
-  const [managersList, setManagersList] = useState<string[]>([]); // DB 팀원 리스트
+  const [managersList, setManagersList] = useState<string[]>([]);
 
   // 수정 모드 상태
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<ContractItem>>({});
 
-  // 외부 클릭 시 월 선택 팝업 닫기
+  // 신규 계약 등록 모달 상태
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newContract, setNewContract] = useState({
+    startDate: new Date().toISOString().split("T")[0],
+    endDate: "",
+    type: "인바운드",
+    manager: "",
+    status: "결제완료",
+    clientName: "",
+    productName: PRODUCT_OPTIONS[0],
+    amount: 0,
+    paymentMethod: "현금",
+    taxInvoice: "미발행",
+    note: "",
+  });
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (monthPickerRef.current && !monthPickerRef.current.contains(event.target as Node)) {
@@ -66,10 +82,9 @@ export default function ContractsPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // DB에서 담당자(팀원) 및 계약 목록 불러오기
+  // DB 데이터 불러오기
   const fetchData = async () => {
     try {
-      // 1. 팀원 목록 가져오기
       const usersSnap = await getDocs(collection(db, "users"));
       const userNames: string[] = [];
       usersSnap.forEach((docSnap) => {
@@ -78,7 +93,10 @@ export default function ContractsPage() {
       });
       setManagersList(userNames);
 
-      // 2. 계약 목록 가져오기
+      if (userNames.length > 0) {
+        setNewContract((prev) => ({ ...prev, manager: userNames[0] }));
+      }
+
       const querySnapshot = await getDocs(collection(db, "contracts"));
       const list: ContractItem[] = [];
       querySnapshot.forEach((docSnap) => {
@@ -91,7 +109,7 @@ export default function ContractsPage() {
           manager: d.manager || (userNames[0] || "매니저 1"),
           status: d.status || "결제완료",
           clientName: d.clientName || d.companyName || "고객사",
-          productName: d.productName || "플레이스파트너 스탠다드",
+          productName: d.productName || PRODUCT_OPTIONS[0],
           amount: Number(d.amount || d.contractAmount || 0),
           paymentMethod: d.paymentMethod || "현금",
           taxInvoice: d.taxInvoice || "미발행",
@@ -111,19 +129,57 @@ export default function ContractsPage() {
     return () => unsubscribe();
   }, []);
 
-  // 수정 모드 시작
+  // 신규 계약 등록
+  const handleCreateContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newContract.clientName.trim()) {
+      alert("고객사(업체명)를 입력해 주세요.");
+      return;
+    }
+
+    try {
+      const docRef = await addDoc(collection(db, "contracts"), {
+        ...newContract,
+        amount: Number(newContract.amount),
+        createdAt: new Date(),
+      });
+
+      setContracts([
+        { id: docRef.id, ...newContract, amount: Number(newContract.amount) },
+        ...contracts,
+      ]);
+
+      setIsAddModalOpen(false);
+      setNewContract({
+        startDate: new Date().toISOString().split("T")[0],
+        endDate: "",
+        type: "인바운드",
+        manager: managersList[0] || "",
+        status: "결제완료",
+        clientName: "",
+        productName: PRODUCT_OPTIONS[0],
+        amount: 0,
+        paymentMethod: "현금",
+        taxInvoice: "미발행",
+        note: "",
+      });
+      alert("신규 계약이 성공적으로 등록되었습니다.");
+    } catch (error) {
+      console.error("계약 등록 실패:", error);
+      alert("계약 등록 중 오류가 발생했습니다.");
+    }
+  };
+
   const handleStartEdit = (item: ContractItem) => {
     setEditingId(item.id);
     setEditForm({ ...item });
   };
 
-  // 수정 취소
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditForm({});
   };
 
-  // 수정 저장
   const handleSaveEdit = async (id: string) => {
     try {
       await updateDoc(doc(db, "contracts", id), editForm);
@@ -131,12 +187,10 @@ export default function ContractsPage() {
       setEditingId(null);
       alert("계약 정보가 수정되었습니다.");
     } catch (error) {
-      console.error("수정 실패:", error);
       alert("저장 중 오류가 발생했습니다.");
     }
   };
 
-  // 삭제 처리
   const handleDeleteContract = async (id: string, clientName: string) => {
     if (!confirm(`'${clientName}' 계약을 정말 삭제하시겠습니까?`)) return;
 
@@ -146,30 +200,38 @@ export default function ContractsPage() {
       if (editingId === id) setEditingId(null);
       alert("계약이 삭제되었습니다.");
     } catch (error) {
-      console.error("삭제 실패:", error);
       alert("삭제 중 오류가 발생했습니다.");
     }
   };
 
+  // 🎯 ts(2362) 완벽 해결: number 검증 강화
   const handlePrevMonth = () => {
-    if (typeof currentMonth !== "number" || currentMonth === 1) {
+    if (typeof currentMonth === "number") {
+      if (currentMonth === 1) {
+        setCurrentMonth(12);
+        setCurrentYear((prev) => prev - 1);
+      } else {
+        const prevMonth: number = currentMonth - 1;
+        setCurrentMonth(prevMonth);
+      }
+    } else {
       setCurrentMonth(12);
       setCurrentYear((prev) => prev - 1);
-    } else {
-      const prevVal: number = currentMonth - 1;
-      setCurrentMonth(prevVal);
     }
   };
 
+  // 🎯 ts(2365) 완벽 해결: number 검증 강화
   const handleNextMonth = () => {
-    if (typeof currentMonth !== "number") {
-      setCurrentMonth(1);
-    } else if (currentMonth === 12) {
-      setCurrentYear((prev) => prev + 1);
-      setCurrentMonth(1);
+    if (typeof currentMonth === "number") {
+      if (currentMonth === 12) {
+        setCurrentYear((prev) => prev + 1);
+        setCurrentMonth(1);
+      } else {
+        const nextMonth: number = currentMonth + 1;
+        setCurrentMonth(nextMonth);
+      }
     } else {
-      const nextVal: number = currentMonth + 1;
-      setCurrentMonth(nextVal);
+      setCurrentMonth(1);
     }
   };
 
@@ -186,10 +248,7 @@ export default function ContractsPage() {
       const dateParts = item.startDate.split("-");
       if (dateParts.length < 2) return false;
 
-      const contractYear = Number(dateParts[0]);
-      const contractMonth = Number(dateParts[1]);
-
-      return contractYear === currentYear && contractMonth === currentMonth;
+      return Number(dateParts[0]) === currentYear && Number(dateParts[1]) === currentMonth;
     })
     .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
 
@@ -199,7 +258,7 @@ export default function ContractsPage() {
 
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-[1500px] mx-auto">
-          {/* 상단 헤더 */}
+          {/* 헤더 */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-black flex items-center gap-2">
@@ -260,14 +319,14 @@ export default function ContractsPage() {
             </div>
 
             <button
-              onClick={() => alert("신규 계약 등록 모달 연동 가능")}
+              onClick={() => setIsAddModalOpen(true)}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all"
             >
               <Plus size={16} /> 신규 계약
             </button>
           </div>
 
-          {/* 서치 & 정보 카운터 */}
+          {/* 서치 및 정보 */}
           <div className="flex items-center justify-between p-4 mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
             <div className="text-sm font-bold text-gray-700">
               현재 등록된 DB 데이터 수: <span className="text-blue-600">{filteredContracts.length}건</span>
@@ -285,7 +344,7 @@ export default function ContractsPage() {
             </div>
           </div>
 
-          {/* 테이블 컨테이너 */}
+          {/* 테이블 */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
             <table className="w-full text-left text-xs text-gray-600 min-w-[1300px]">
               <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100">
@@ -346,14 +405,14 @@ export default function ContractsPage() {
                                 type="text"
                                 value={editForm.startDate || ""}
                                 onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
-                                className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500"
+                                className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
                               />
                               <span className="text-gray-400 font-bold">~</span>
                               <input
                                 type="text"
                                 value={editForm.endDate || ""}
                                 onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
-                                className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500"
+                                className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
                               />
                             </div>
                           ) : (
@@ -379,7 +438,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 🎯 담당자 드롭다운 (팀원 DB 연동) */}
                         <td className="p-3">
                           {isEditing ? (
                             <select
@@ -387,15 +445,11 @@ export default function ContractsPage() {
                               onChange={(e) => setEditForm({ ...editForm, manager: e.target.value })}
                               className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
                             >
-                              {managersList.length > 0 ? (
-                                managersList.map((m) => (
-                                  <option key={m} value={m}>
-                                    {m}
-                                  </option>
-                                ))
-                              ) : (
-                                <option value={editForm.manager}>{editForm.manager}</option>
-                              )}
+                              {managersList.map((m) => (
+                                <option key={m} value={m}>
+                                  {m}
+                                </option>
+                              ))}
                             </select>
                           ) : (
                             item.manager
@@ -437,13 +491,12 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 🎯 판매 상품 드롭다운 (고정 5종 지정) */}
                         <td className="p-3 font-bold text-blue-600">
                           {isEditing ? (
                             <select
                               value={editForm.productName || PRODUCT_OPTIONS[0]}
                               onChange={(e) => setEditForm({ ...editForm, productName: e.target.value })}
-                              className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none text-blue-600"
+                              className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
                             >
                               {PRODUCT_OPTIONS.map((prod) => (
                                 <option key={prod} value={prod}>
@@ -553,6 +606,173 @@ export default function ContractsPage() {
           </div>
         </div>
       </main>
+
+      {/* 신규 계약 등록 모달 */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="w-full max-w-lg p-6 bg-white rounded-3xl border border-gray-100 shadow-2xl text-gray-900 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-black flex items-center gap-2">
+                <FileText className="text-blue-600" size={20} /> 신규 계약 등록
+              </h2>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateContract} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">고객사명 (업체명)</label>
+                <div className="relative">
+                  <Building2 className="absolute left-3.5 top-3 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="예: 피부튼튼 마곡점"
+                    value={newContract.clientName}
+                    onChange={(e) => setNewContract({ ...newContract, clientName: e.target.value })}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:border-blue-600"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">계약 시작일</label>
+                  <input
+                    type="date"
+                    value={newContract.startDate}
+                    onChange={(e) => setNewContract({ ...newContract, startDate: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:border-blue-600"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">계약 종료일</label>
+                  <input
+                    type="date"
+                    value={newContract.endDate}
+                    onChange={(e) => setNewContract({ ...newContract, endDate: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:border-blue-600"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">유형</label>
+                  <select
+                    value={newContract.type}
+                    onChange={(e) => setNewContract({ ...newContract, type: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none"
+                  >
+                    <option value="인바운드">인바운드</option>
+                    <option value="콜">콜</option>
+                    <option value="아웃바운드">아웃바운드</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">담당자</label>
+                  <select
+                    value={newContract.manager}
+                    onChange={(e) => setNewContract({ ...newContract, manager: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none"
+                  >
+                    {managersList.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">판매 상품</label>
+                  <select
+                    value={newContract.productName}
+                    onChange={(e) => setNewContract({ ...newContract, productName: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none text-blue-600"
+                  >
+                    {PRODUCT_OPTIONS.map((prod) => (
+                      <option key={prod} value={prod}>
+                        {prod}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">계약 금액 (원)</label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3.5 top-3 text-gray-400" size={16} />
+                    <input
+                      type="number"
+                      placeholder="2400000"
+                      value={newContract.amount}
+                      onChange={(e) => setNewContract({ ...newContract, amount: Number(e.target.value) })}
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:border-blue-600"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">결제 수단</label>
+                  <input
+                    type="text"
+                    placeholder="예: 현금, 카드 등"
+                    value={newContract.paymentMethod}
+                    onChange={(e) => setNewContract({ ...newContract, paymentMethod: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">세금계산서</label>
+                  <select
+                    value={newContract.taxInvoice}
+                    onChange={(e) => setNewContract({ ...newContract, taxInvoice: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none"
+                  >
+                    <option value="발행">발행</option>
+                    <option value="미발행">미발행</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">특이사항</label>
+                <input
+                  type="text"
+                  placeholder="예: 숨고 인입건, 추가 할인 적용 등"
+                  value={newContract.note}
+                  onChange={(e) => setNewContract({ ...newContract, note: e.target.value })}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="flex-1 py-3 rounded-xl font-bold text-xs bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
+                >
+                  등록하기
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
