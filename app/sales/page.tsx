@@ -28,18 +28,19 @@ interface SalesRecord {
   recallTime: string;
 }
 
+// 🎯 '미팅후이탈' (미팅 진행 후 전환 실패) 반영된 최종 영업 상태 리스트
 const STATUS_OPTIONS = [
   "신규가망",
   "당일재통",
   "자료요청",
   "미팅예정",
-  "미팅짤",
+  "미팅후이탈",
   "계약건",
-  "결제짤림",
+  "결제실패",
   "연장체크",
-  "월말터치",
-  "최종짤",
-  "짤모음",
+  "월말팔로업",
+  "최종이탈",
+  "이탈DB",
   "이전재통",
   "거절",
   "부재",
@@ -98,7 +99,7 @@ export default function SalesPage() {
     return () => unsubscribe();
   }, []);
 
-  // 빈 행 추가 (오늘 날짜 자동 입력)
+  // 빈 행 추가
   const handleAddEmptyRow = async () => {
     try {
       const todayStr = new Date().toISOString().split("T")[0];
@@ -293,7 +294,7 @@ export default function SalesPage() {
                           )}
                         </td>
 
-                        {/* 🎯 날짜: 달력 피커(Date Picker) 적용 */}
+                        {/* 날짜 */}
                         <td className="p-3">
                           {isEditing ? (
                             <input
