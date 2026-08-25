@@ -131,25 +131,27 @@ export default function ContractsPage() {
     }
   };
 
-  // 🎯 타입 에러 수정된 이전 월 이동 함수
+  // 🎯 타입 에러(ts2362) 완벽 해결: 숫자 타입 명확화
   const handlePrevMonth = () => {
-    if (typeof currentMonth === "string" || currentMonth === 1) {
+    if (typeof currentMonth !== "number" || currentMonth === 1) {
       setCurrentMonth(12);
       setCurrentYear((prev) => prev - 1);
     } else {
-      setCurrentMonth((prev) => prev - 1);
+      const prevVal: number = currentMonth - 1;
+      setCurrentMonth(prevVal);
     }
   };
 
-  // 🎯 타입 에러 수정된 다음 월 이동 함수
+  // 🎯 타입 에러(ts2365) 완벽 해결: 숫자 타입 명확화
   const handleNextMonth = () => {
-    if (typeof currentMonth === "string") {
+    if (typeof currentMonth !== "number") {
       setCurrentMonth(1);
     } else if (currentMonth === 12) {
       setCurrentYear((prev) => prev + 1);
       setCurrentMonth(1);
     } else {
-      setCurrentMonth((prev) => prev + 1);
+      const nextVal: number = currentMonth + 1;
+      setCurrentMonth(nextVal);
     }
   };
 
@@ -176,7 +178,6 @@ export default function ContractsPage() {
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA] text-gray-900">
-      {/* 🎯 currentMenu="contracts" 추가로 TS 에러 해결 */}
       <Sidebar currentMenu="contracts" />
 
       <main className="flex-1 p-8 overflow-y-auto">
