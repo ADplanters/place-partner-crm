@@ -1,256 +1,227 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Sidebar from "../components/Sidebar";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, X, Trash2 } from "lucide-react";
-import { db } from "../../firebase";
-import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from "firebase/firestore";
+import React, { useState, useEffect, useRef } from "react";
+import Sidebar from "../components/Sidebar"; // 🌟 공통 사이드바 불러오기
+import { auth, db } from "../../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, getDocs } from "firebase/firestore";
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+} from "lucide-react";
 
 interface ScheduleEvent {
   id: string;
   title: string;
-  date: string; // YYYY-MM-DD
-  type: string;
+  date: string;
+  color?: string;
 }
 
 export default function SchedulePage() {
+  const monthPickerRef = useRef<HTMLDivElement>(null);
+
+  const [currentYear, setCurrentYear] = useState(2026);
+  const [currentMonth, setCurrentMonth] = useState(8);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 입력 폼 상태
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("2026-08-25");
-  const [type, setType] = useState("미팅");
-
-  const daysOfWeek = ["일", "월", "화", "수", "목", "금", "토"];
-
-  // 1. Firebase에서 일정 데이터 불러오기
-  const fetchSchedules = async () => {
-    setIsLoading(true);
-    try {
-      const q = query(collection(db, "schedules"), orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
-      const data: ScheduleEvent[] = [];
-      querySnapshot.forEach((doc) => {
-        data.push({ id: doc.id, ...doc.data() } as ScheduleEvent);
-      });
-      setEvents(data);
-    } catch (error) {
-      console.error("일정 불러오기 실패:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // 외부 클릭 시 월 선택 드롭다운 닫기
   useEffect(() => {
-    fetchSchedules();
+    const handleClickOutside = (event: MouseEvent) => {
+      if (monthPickerRef.current && !monthPickerRef.current.contains(event.target as Node)) {
+        setIsMonthPickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 2. 새 일정 DB 추가
-  const handleAddSchedule = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !date) return;
+  // Firestore에서 일정 가져오기
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const querySnapshot = await getDocs(collection(db, "schedules"));
+          const eventList: ScheduleEvent[] = [];
+          querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            eventList.push({
+              id: docSnap.id,
+              title: data.title || "일정",
+              date: data.date || "",
+              color: data.color || "bg-purple-100 text-purple-700",
+            });
+          });
+          setEvents(eventList);
+        } catch (error) {
+          console.error("일정 불러오기 에러:", error);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
-    try {
-      const newSchedule = {
-        title,
-        date,
-        type,
-        createdAt: serverTimestamp(),
-      };
-      const docRef = await addDoc(collection(db, "schedules"), newSchedule);
-      setEvents([{ id: docRef.id, ...newSchedule } as ScheduleEvent, ...events]);
-      setTitle("");
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error("일정 추가 실패:", error);
-      alert("일정 추가 중 오류가 발생했습니다.");
+  // 이전 월 이동
+  const handlePrevMonth = () => {
+    if (currentMonth === 1) {
+      setCurrentYear((prev) => prev - 1);
+      setCurrentMonth(12);
+    } else {
+      setCurrentMonth((prev) => prev - 1);
     }
   };
 
-  // 3. 일정 삭제
-  const handleDeleteSchedule = async (id: string) => {
-    if (!confirm("이 일정을 삭제하시겠습니까?")) return;
-    try {
-      await deleteDoc(doc(db, "schedules", id));
-      setEvents(events.filter((e) => e.id !== id));
-    } catch (error) {
-      console.error("일정 삭제 실패:", error);
+  // 다음 월 이동
+  const handleNextMonth = () => {
+    if (currentMonth === 12) {
+      setCurrentYear((prev) => prev + 1);
+      setCurrentMonth(1);
+    } else {
+      setCurrentMonth((prev) => prev + 1);
     }
   };
 
-  // 2026년 8월 기준 달력 셀 생성 (8월 1일: 토요일 -> 앞쪽 빈칸 6개)
-  const blankDays = Array.from({ length: 6 }, () => null);
-  const monthDays = Array.from({ length: 31 }, (_, i) => i + 1);
-  const allCells = [...blankDays, ...monthDays];
-  while (allCells.length < 35) allCells.push(null);
+  // 달력 날짜 그리드 계산
+  const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+  const firstDayOfWeek = new Date(currentYear, currentMonth - 1, 1).getDay();
 
-  // 이벤트 타입별 색상 배정
-  const getTypeColor = (evtType: string) => {
-    switch (evtType) {
-      case "미팅": return "bg-blue-100 text-blue-700 border-blue-200";
-      case "계약": return "bg-emerald-100 text-emerald-700 border-emerald-200";
-      case "내부": return "bg-purple-100 text-purple-700 border-purple-200";
-      default: return "bg-gray-100 text-gray-700 border-gray-200";
-    }
-  };
+  const calendarDays = [];
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    calendarDays.push(null);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    calendarDays.push(d);
+  }
 
   return (
+    // 🌟 사이드바와 메인 콘텐츠를 나누는 전체 레이아웃
     <div className="flex min-h-screen bg-[#F8F9FA]">
-      <Sidebar currentMenu="schedule"/>
+      
+      {/* 🌟 공통 사이드바 장착 (로고 클릭, 알림창 모두 여기서 작동) */}
+      <Sidebar currentMenu="schedule" />
 
-      <main className="relative flex-1 p-8">
-        {/* 상단 헤더 */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900">
-              <CalendarIcon className="h-6 w-6 text-blue-600" />
-              통합 일정 (DB 연동됨)
-            </h1>
-            <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-1.5 shadow-sm">
-              <button className="text-gray-400 hover:text-gray-600"><ChevronLeft className="h-4 w-4" /></button>
-              <span className="text-sm font-bold text-gray-800">2026년 8월</span>
-              <button className="text-gray-400 hover:text-gray-600"><ChevronRight className="h-4 w-4" /></button>
-            </div>
-          </div>
+      {/* 메인 콘텐츠 영역 */}
+      <main className="flex-1 p-8 overflow-y-auto">
+        <div className="max-w-6xl mx-auto">
+          {/* 상단 헤더 및 연월 선택기 */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-black flex items-center gap-2 text-gray-900">
+                <CalendarIcon className="text-blue-600" size={24} /> 통합 일정 (DB 연동됨)
+              </h1>
 
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4" /> 일정 추가
-          </button>
-        </div>
+              {/* 월 이동 및 선택 피커 */}
+              <div className="relative" ref={monthPickerRef}>
+                <div className="flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-xl font-bold text-sm shadow-sm text-gray-900">
+                  <button
+                    onClick={handlePrevMonth}
+                    className="p-1 hover:bg-gray-100 rounded-lg transition-all"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
+                    className="px-2 hover:text-blue-600 transition-colors"
+                  >
+                    {`${currentYear}년 ${currentMonth}월`}
+                  </button>
+                  <button
+                    onClick={handleNextMonth}
+                    className="p-1 hover:bg-gray-100 rounded-lg transition-all"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
 
-        {/* 캘린더 영역 */}
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm h-[calc(100vh-140px)]">
-          <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
-            {daysOfWeek.map((day, index) => (
-              <div
-                key={day}
-                className={`py-3 text-center text-sm font-bold ${
-                  index === 0 ? "text-red-500" : index === 6 ? "text-blue-500" : "text-gray-600"
-                }`}
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid flex-1 grid-cols-7 grid-rows-5 bg-gray-200 gap-[1px]">
-            {allCells.map((dayNum, index) => {
-              // YYYY-MM-DD 형식 매칭
-              const currentDateStr = dayNum
-                ? `2026-08-${dayNum.toString().padStart(2, "0")}`
-                : "";
-              const dayEvents = events.filter((e) => e.date === currentDateStr);
-
-              return (
-                <div key={index} className="flex flex-col bg-white p-2 transition-colors hover:bg-gray-50/80 overflow-y-auto">
-                  {dayNum && (
-                    <>
-                      <div
-                        className={`mb-1 text-sm font-semibold ${
-                          index % 7 === 0 ? "text-red-500" : index % 7 === 6 ? "text-blue-500" : "text-gray-700"
+                {/* 1월 ~ 12월 선택 드롭다운 팝업 */}
+                {isMonthPickerOpen && (
+                  <div className="absolute top-10 left-0 w-60 p-3 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 grid grid-cols-3 gap-2">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => {
+                          setCurrentMonth(m);
+                          setIsMonthPickerOpen(false);
+                        }}
+                        className={`py-2 rounded-xl font-bold text-xs transition-all ${
+                          currentMonth === m
+                            ? "bg-blue-600 text-white"
+                            : "hover:bg-gray-100 text-gray-700"
                         }`}
                       >
-                        {dayNum}
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        {dayEvents.map((evt) => (
-                          <div
-                            key={evt.id}
-                            className={`group flex items-center justify-between rounded border px-1.5 py-1 text-[11px] font-bold ${getTypeColor(
-                              evt.type
-                            )}`}
-                          >
-                            <span className="truncate">{evt.title}</span>
-                            <button
-                              onClick={() => handleDeleteSchedule(evt.id)}
-                              className="hidden text-gray-400 hover:text-red-500 group-hover:block"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 일정 추가 모달 */}
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-              <div className="mb-4 flex items-center justify-between border-b pb-3">
-                <h3 className="text-base font-bold text-gray-900">새 일정 추가</h3>
-                <button onClick={() => setIsModalOpen(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100">
-                  <X className="h-5 w-5" />
-                </button>
+                        {m}월
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+            </div>
 
-              <form onSubmit={handleAddSchedule} className="space-y-4 text-xs font-medium text-gray-700">
-                <div>
-                  <label className="mb-1 block font-bold">일정 내용</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="예: 애플 미팅건"
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-blue-500"
-                    required
-                  />
-                </div>
+            <button
+              onClick={() => alert("신규 일정 등록 모달 연동 가능")}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all"
+            >
+              <Plus size={16} /> 일정 추가
+            </button>
+          </div>
 
-                <div>
-                  <label className="mb-1 block font-bold">날짜</label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none focus:border-blue-500"
-                    required
-                  />
-                </div>
+          {/* 달력 UI */}
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
+            {/* 요일 헤더 */}
+            <div className="grid grid-cols-7 border-b border-gray-200 text-center text-xs font-black text-gray-500 bg-gray-50/50 py-3">
+              <div className="text-red-500">일</div>
+              <div>월</div>
+              <div>화</div>
+              <div>수</div>
+              <div>목</div>
+              <div>금</div>
+              <div className="text-blue-500">토</div>
+            </div>
 
-                <div>
-                  <label className="mb-1 block font-bold">유형</label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 p-2.5 outline-none"
-                  >
-                    <option value="미팅">미팅 (파란색)</option>
-                    <option value="계약">계약 (초록색)</option>
-                    <option value="내부">내부 (보라색)</option>
-                  </select>
-                </div>
+            {/* 날짜 그리드 */}
+            <div className="grid grid-cols-7 divide-x divide-y divide-gray-100">
+              {calendarDays.map((day, idx) => {
+                if (day === null) {
+                  return <div key={`empty-${idx}`} className="h-28 bg-gray-50/30" />;
+                }
 
-                <div className="mt-6 flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
-                  >
-                    등록하기
-                  </button>
-                </div>
-              </form>
+                const formattedMonth = String(currentMonth).padStart(2, "0");
+                const formattedDay = String(day).padStart(2, "0");
+                const dateKey = `${currentYear}-${formattedMonth}-${formattedDay}`;
+
+                const dayEvents = events.filter((e) => e.date === dateKey);
+
+                return (
+                  <div key={day} className="h-28 p-2 flex flex-col justify-between hover:bg-gray-50/50 transition-all">
+                    <span
+                      className={`text-xs font-bold ${
+                        idx % 7 === 0 ? "text-red-500" : idx % 7 === 6 ? "text-blue-500" : "text-gray-700"
+                      }`}
+                    >
+                      {day}
+                    </span>
+
+                    <div className="space-y-1 overflow-y-auto max-h-20">
+                      {dayEvents.map((ev) => (
+                        <div
+                          key={ev.id}
+                          className={`text-[10px] font-bold p-1 rounded-md truncate ${
+                            ev.color || "bg-purple-100 text-purple-700"
+                          }`}
+                        >
+                          {ev.title}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        )}
+        </div>
       </main>
     </div>
   );
