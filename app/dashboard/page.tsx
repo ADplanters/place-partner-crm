@@ -19,6 +19,8 @@ import {
   Folder,
   GraduationCap,
   Users,
+  Coffee,
+  Globe,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -119,8 +121,12 @@ export default function DashboardPage() {
       {/* 1. 사이드바 */}
       <aside className={`w-64 border-r flex flex-col justify-between p-6 ${isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"}`}>
         <div>
-          {/* 로고 */}
-          <div className="flex items-center gap-2 mb-10">
+          {/* 클릭 시 대시보드 홈으로 이동하는 로고 */}
+          <div
+            onClick={() => router.push("/dashboard")}
+            className="flex items-center gap-2 mb-10 cursor-pointer hover:opacity-80 transition-opacity"
+            title="대시보드 홈으로 이동"
+          >
             <span className="text-3xl font-black text-red-600">*</span>
             <span className="text-xl font-black text-red-600 tracking-tight">PLACE PARTNER</span>
           </div>
@@ -151,13 +157,13 @@ export default function DashboardPage() {
           </nav>
         </div>
 
-        {/* 사이드바 하단 (다크모드 / 알림 / 프로필) */}
+        {/* 사이드바 하단 (다크모드 / 알림 / 카페 & 홈페이지 바로가기 / 프로필) */}
         <div className="space-y-4 relative">
           <div className="flex items-center gap-2">
             {/* 다크모드 버튼 */}
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-3 rounded-full transition-all ${isDarkMode ? "bg-gray-700 text-yellow-400 hover:bg-gray-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              className={`p-2.5 rounded-full transition-all ${isDarkMode ? "bg-gray-700 text-yellow-400 hover:bg-gray-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               title="다크모드 토글"
             >
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
@@ -166,7 +172,7 @@ export default function DashboardPage() {
             {/* 알림창 토글 버튼 */}
             <button
               onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-              className={`relative p-3 rounded-full transition-all ${isDarkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              className={`relative p-2.5 rounded-full transition-all ${isDarkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               title="알림창"
             >
               <Bell size={18} />
@@ -174,6 +180,28 @@ export default function DashboardPage() {
                 <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
               )}
             </button>
+
+            {/* 네이버 플레이스 파트너 카페 링크 */}
+            <a
+              href="https://cafe.naver.com/bluebottlefollower"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`p-2.5 rounded-full transition-all ${isDarkMode ? "bg-gray-700 text-green-400 hover:bg-gray-600" : "bg-green-50 text-green-600 hover:bg-green-100"}`}
+              title="네이버 플레이스 파트너 카페"
+            >
+              <Coffee size={18} />
+            </a>
+
+            {/* 애드플랜터스 홈페이지 링크 */}
+            <a
+              href="https://www.adplanters.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`p-2.5 rounded-full transition-all ${isDarkMode ? "bg-gray-700 text-blue-400 hover:bg-gray-600" : "bg-blue-50 text-blue-600 hover:bg-blue-100"}`}
+              title="애드플랜터스 공식 홈페이지"
+            >
+              <Globe size={18} />
+            </a>
           </div>
 
           {/* 알림 팝업 창 */}
