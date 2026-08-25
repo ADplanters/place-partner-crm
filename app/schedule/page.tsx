@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { auth, db } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -26,12 +26,13 @@ interface ScheduleEvent {
   memo?: string;
 }
 
+// 🎯 실무 맞춤형 색상 태그 기획 (대면영업, 가망건, 2차콜, 임시보류, 계약/중요)
 const COLOR_OPTIONS = [
-  { label: "보라", value: "bg-purple-100 text-purple-700" },
-  { label: "파랑", value: "bg-blue-100 text-blue-700" },
-  { label: "초록", value: "bg-emerald-100 text-emerald-700" },
-  { label: "빨강", value: "bg-red-100 text-red-700" },
-  { label: "노랑", value: "bg-amber-100 text-amber-700" },
+  { label: "대면영업", value: "bg-purple-100 text-purple-700 border-purple-200" },
+  { label: "가망건", value: "bg-blue-100 text-blue-700 border-blue-200" },
+  { label: "2차콜", value: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  { label: "임시보류", value: "bg-amber-100 text-amber-700 border-amber-200" },
+  { label: "계약/중요", value: "bg-rose-100 text-rose-700 border-rose-200" },
 ];
 
 export default function SchedulePage() {
@@ -43,25 +44,24 @@ export default function SchedulePage() {
 
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
 
-  // 🌟 일정 추가 모달 상태
+  // 신규 등록 모달 상태
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDate, setNewDate] = useState(new Date().toISOString().split("T")[0]);
-  const [newColor, setNewColor] = useState("bg-purple-100 text-purple-700");
+  const [newColor, setNewColor] = useState(COLOR_OPTIONS[0].value);
   const [newMemo, setNewMemo] = useState("");
 
-  // 🌟 일정 상세/수정/삭제 모달 상태
+  // 상세/수정 모달 상태
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
 
-  // 수정 전용 상태
+  // 수정용 상태
   const [editTitle, setEditTitle] = useState("");
   const [editDate, setEditDate] = useState("");
   const [editColor, setEditColor] = useState("");
   const [editMemo, setEditMemo] = useState("");
 
-  // 외부 클릭 시 월 선택 드롭다운 닫기
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (monthPickerRef.current && !monthPickerRef.current.contains(event.target as Node)) {
@@ -72,7 +72,6 @@ export default function SchedulePage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // DB 일정 로딩
   const fetchSchedules = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "schedules"));
@@ -83,7 +82,7 @@ export default function SchedulePage() {
           id: docSnap.id,
           title: data.title || "일정",
           date: data.date || "",
-          color: data.color || "bg-purple-100 text-purple-700",
+          color: data.color || COLOR_OPTIONS[0].value,
           memo: data.memo || "",
         });
       });
@@ -100,7 +99,7 @@ export default function SchedulePage() {
     return () => unsubscribe();
   }, []);
 
-  // 🌟 신규 일정 DB 등록
+  // 일정 등록
   const handleAddSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) {
@@ -124,6 +123,7 @@ export default function SchedulePage() {
 
       setNewTitle("");
       setNewMemo("");
+      setNewColor(COLOR_OPTIONS[0].value);
       setIsAddModalOpen(false);
       alert("신규 일정이 등록되었습니다.");
     } catch (error) {
@@ -132,18 +132,18 @@ export default function SchedulePage() {
     }
   };
 
-  // 🌟 일정 상세 모달 열기
+  // 상세 모달 열기
   const handleOpenDetail = (ev: ScheduleEvent) => {
     setSelectedEvent(ev);
     setEditTitle(ev.title);
     setEditDate(ev.date);
-    setEditColor(ev.color || "bg-purple-100 text-purple-700");
+    setEditColor(ev.color || COLOR_OPTIONS[0].value);
     setEditMemo(ev.memo || "");
     setIsEditMode(false);
     setIsDetailModalOpen(true);
   };
 
-  // 🌟 일정 수정 저장
+  // 일정 수정
   const handleUpdateSchedule = async () => {
     if (!selectedEvent) return;
     if (!editTitle.trim()) {
@@ -170,17 +170,17 @@ export default function SchedulePage() {
 
       setSelectedEvent({ ...selectedEvent, title: editTitle, date: editDate, color: editColor, memo: editMemo });
       setIsEditMode(false);
-      alert("일정이 성공적으로 수정되었습니다.");
+      alert("일정이 수정되었습니다.");
     } catch (error) {
       console.error("수정 실패:", error);
       alert("일정 수정 중 오류가 발생했습니다.");
     }
   };
 
-  // 🌟 일정 삭제
+  // 일정 삭제
   const handleDeleteSchedule = async () => {
     if (!selectedEvent) return;
-    if (!confirm(`'${selectedEvent.title}' 일정을 정말 삭제하시겠습니까?`)) return;
+    if (!confirm(`'${selectedEvent.title}' 일정을 삭제하시겠습니까?`)) return;
 
     try {
       await deleteDoc(doc(db, "schedules", selectedEvent.id));
@@ -221,14 +221,20 @@ export default function SchedulePage() {
     calendarDays.push(d);
   }
 
+  // 색상 클래스로부터 태그 라벨 명칭 반환
+  const getTagLabel = (colorValue?: string) => {
+    const found = COLOR_OPTIONS.find((c) => c.value === colorValue);
+    return found ? found.label : "일정";
+  };
+
   return (
     <div className="flex min-h-screen bg-[#F8F9FA] text-gray-900">
       <Sidebar currentMenu="schedule" />
 
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-6xl mx-auto">
-          {/* 헤더 */}
-          <div className="flex items-center justify-between mb-8">
+          {/* 상단 헤더 및 범례 */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-black flex items-center gap-2">
                 <CalendarIcon className="text-blue-600" size={24} /> 통합 일정 (DB 연동됨)
@@ -236,7 +242,7 @@ export default function SchedulePage() {
 
               <div className="relative" ref={monthPickerRef}>
                 <div className="flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-xl font-bold text-sm shadow-sm">
-                  <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 rounded-lg transition-all">
+                  <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 rounded-lg">
                     <ChevronLeft size={16} />
                   </button>
                   <button
@@ -245,7 +251,7 @@ export default function SchedulePage() {
                   >
                     {`${currentYear}년 ${currentMonth}월`}
                   </button>
-                  <button onClick={handleNextMonth} className="p-1 hover:bg-gray-100 rounded-lg transition-all">
+                  <button onClick={handleNextMonth} className="p-1 hover:bg-gray-100 rounded-lg">
                     <ChevronRight size={16} />
                   </button>
                 </div>
@@ -271,12 +277,23 @@ export default function SchedulePage() {
               </div>
             </div>
 
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all"
-            >
-              <Plus size={16} /> 일정 추가
-            </button>
+            {/* 실무 태그 안내 범례 및 추가 버튼 */}
+            <div className="flex items-center gap-3">
+              <div className="hidden lg:flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-xl text-[11px] font-bold">
+                {COLOR_OPTIONS.map((c) => (
+                  <span key={c.label} className={`px-2 py-0.5 rounded-md ${c.value}`}>
+                    {c.label}
+                  </span>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all"
+              >
+                <Plus size={16} /> 일정 추가
+              </button>
+            </div>
           </div>
 
           {/* 달력 UI */}
@@ -318,20 +335,22 @@ export default function SchedulePage() {
                         <div
                           key={ev.id}
                           onClick={() => handleOpenDetail(ev)}
-                          className={`group relative text-[10px] font-bold p-1 rounded-md truncate cursor-pointer transition-all ${
-                            ev.color || "bg-purple-100 text-purple-700"
+                          className={`group relative text-[10px] font-bold p-1 rounded-md truncate cursor-pointer transition-all border ${
+                            ev.color || COLOR_OPTIONS[0].value
                           }`}
                         >
+                          <span className="opacity-75 mr-1">[{getTagLabel(ev.color)}]</span>
                           {ev.title}
 
-                          {/* 🌟 마우스오버 시 메모 내용 확인 툴팁 */}
-                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-52 p-3 bg-gray-900 text-white rounded-2xl shadow-2xl z-40 pointer-events-none text-left">
-                            <div className="font-bold text-xs border-b border-gray-700 pb-1 mb-1.5 truncate text-blue-300 flex items-center gap-1">
-                              📌 {ev.title}
+                          {/* 🌟 마우스오버 미리보기 툴팁 */}
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-56 p-3 bg-gray-900 text-white rounded-2xl shadow-2xl z-40 pointer-events-none text-left">
+                            <div className="flex items-center justify-between border-b border-gray-700 pb-1.5 mb-1.5">
+                              <span className="font-bold text-xs text-blue-300 truncate">📌 {ev.title}</span>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700">
+                                {getTagLabel(ev.color)}
+                              </span>
                             </div>
-                            <div className="text-[10px] text-gray-300 mb-1 flex items-center gap-1">
-                              📅 {ev.date}
-                            </div>
+                            <div className="text-[10px] text-gray-300 mb-1">📅 {ev.date}</div>
                             <div className="text-[10px] text-gray-200 whitespace-pre-wrap leading-relaxed">
                               {ev.memo ? ev.memo : "등록된 세부 메모가 없습니다."}
                             </div>
@@ -384,16 +403,19 @@ export default function SchedulePage() {
                 />
               </div>
 
+              {/* 🎯 기획된 영업 상태 태그 선택 */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">색상 태그</label>
-                <div className="flex gap-2">
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">영업 상태 태그</label>
+                <div className="flex flex-wrap gap-1.5">
                   {COLOR_OPTIONS.map((c) => (
                     <button
                       type="button"
-                      key={c.value}
+                      key={c.label}
                       onClick={() => setNewColor(c.value)}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${c.value} ${
-                        newColor === c.value ? "ring-2 ring-gray-900 ring-offset-1 scale-105" : "opacity-60 hover:opacity-100"
+                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border ${c.value} ${
+                        newColor === c.value
+                          ? "ring-2 ring-blue-600 ring-offset-1 scale-105 shadow-sm"
+                          : "opacity-60 hover:opacity-100"
                       }`}
                     >
                       {c.label}
@@ -402,7 +424,6 @@ export default function SchedulePage() {
                 </div>
               </div>
 
-              {/* 🌟 메모 입력란 추가 */}
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1.5">세부 내용 / 메모</label>
                 <textarea
@@ -434,7 +455,7 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* 🌟 2. 일정 클릭 시 오픈되는 상세 / 수정 / 삭제 통합 모달 */}
+      {/* 🌟 2. 일정 클릭 시 오픈되는 상세 / 수정 / 삭제 모달 */}
       {isDetailModalOpen && selectedEvent && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="w-full max-w-md p-6 bg-white rounded-3xl border border-gray-100 shadow-2xl text-gray-900">
@@ -451,12 +472,16 @@ export default function SchedulePage() {
               </button>
             </div>
 
-            {/* 보기 모드 vs 수정 모드 */}
             {!isEditMode ? (
               <div className="space-y-5">
                 <div>
-                  <div className="text-[11px] font-bold text-gray-400 mb-1 flex items-center gap-1">
-                    <Tag size={12} /> 일정 제목
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="text-[11px] font-bold text-gray-400 flex items-center gap-1">
+                      <Tag size={12} /> 일정 제목
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-md text-xs font-bold border ${selectedEvent.color}`}>
+                      {getTagLabel(selectedEvent.color)}
+                    </span>
                   </div>
                   <div className="text-base font-black text-gray-900">{selectedEvent.title}</div>
                 </div>
@@ -477,7 +502,6 @@ export default function SchedulePage() {
                   </div>
                 </div>
 
-                {/* 하단 버튼 3개 (삭제 / 수정 / 닫기) */}
                 <div className="flex gap-2 pt-2">
                   <button
                     onClick={handleDeleteSchedule}
@@ -500,7 +524,6 @@ export default function SchedulePage() {
                 </div>
               </div>
             ) : (
-              /* 수정 모드 폼 */
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1.5">일정 제목</label>
@@ -523,15 +546,17 @@ export default function SchedulePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">색상 태그</label>
-                  <div className="flex gap-2">
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">영업 상태 태그</label>
+                  <div className="flex flex-wrap gap-1.5">
                     {COLOR_OPTIONS.map((c) => (
                       <button
                         type="button"
-                        key={c.value}
+                        key={c.label}
                         onClick={() => setEditColor(c.value)}
-                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${c.value} ${
-                          editColor === c.value ? "ring-2 ring-gray-900 ring-offset-1 scale-105" : "opacity-60 hover:opacity-100"
+                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border ${c.value} ${
+                          editColor === c.value
+                            ? "ring-2 ring-blue-600 ring-offset-1 scale-105 shadow-sm"
+                            : "opacity-60 hover:opacity-100"
                         }`}
                       >
                         {c.label}
