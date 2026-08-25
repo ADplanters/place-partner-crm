@@ -131,7 +131,7 @@ export default function ContractsPage() {
     }
   };
 
-  // 🎯 타입 에러(ts2362) 완벽 해결: 숫자 타입 명확화
+  // 이전 월 이동
   const handlePrevMonth = () => {
     if (typeof currentMonth !== "number" || currentMonth === 1) {
       setCurrentMonth(12);
@@ -142,7 +142,7 @@ export default function ContractsPage() {
     }
   };
 
-  // 🎯 타입 에러(ts2365) 완벽 해결: 숫자 타입 명확화
+  // 다음 월 이동
   const handleNextMonth = () => {
     if (typeof currentMonth !== "number") {
       setCurrentMonth(1);
@@ -271,11 +271,11 @@ export default function ContractsPage() {
 
           {/* 테이블 컨테이너 */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-            <table className="w-full text-left text-xs text-gray-600 min-w-[1200px]">
+            <table className="w-full text-left text-xs text-gray-600 min-w-[1300px]">
               <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100">
                 <tr>
                   <th className="p-3 w-10 text-center"></th>
-                  <th className="p-3 w-40">계약기간(시작~종료)</th>
+                  <th className="p-3 w-56">계약기간(시작~종료)</th>
                   <th className="p-3 w-24">유형</th>
                   <th className="p-3 w-24">담당자</th>
                   <th className="p-3 w-28">상태</th>
@@ -323,14 +323,26 @@ export default function ContractsPage() {
                           )}
                         </td>
 
+                        {/* 🎯 계약기간: 시작일과 종료일을 모두 입력할 수 있도록 보완 */}
                         <td className="p-3 text-gray-500 whitespace-nowrap">
                           {isEditing ? (
-                            <input
-                              type="text"
-                              value={editForm.startDate || ""}
-                              onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
-                              className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500"
-                            />
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={editForm.startDate || ""}
+                                onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                                className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="YYYY-MM-DD"
+                              />
+                              <span className="text-gray-400 font-bold">~</span>
+                              <input
+                                type="text"
+                                value={editForm.endDate || ""}
+                                onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                                className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="YYYY-MM-DD"
+                              />
+                            </div>
                           ) : (
                             `${item.startDate} ~ ${item.endDate}`
                           )}
