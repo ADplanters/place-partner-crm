@@ -35,7 +35,8 @@ export default function ContractsPage() {
   const monthPickerRef = useRef<HTMLDivElement>(null);
 
   const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(8);
+  // 'all' 또는 숫자(1~12)로 선택 상태 관리 (기본값: 'all' 또는 8월)
+  const [currentMonth, setCurrentMonth] = useState<number | "all">("all");
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -91,7 +92,7 @@ export default function ContractsPage() {
     return () => unsubscribe();
   }, []);
 
-  // 수정 모드 시작 (더블클릭 또는 수정 버튼 클릭)
+  // 수정 모드 시작
   const handleStartEdit = (item: ContractItem) => {
     setEditingId(item.id);
     setEditForm({ ...item });
@@ -131,17 +132,24 @@ export default function ContractsPage() {
     }
   };
 
+  // 화살표 이전 월 이동
   const handlePrevMonth = () => {
-    if (currentMonth === 1) {
+    if (currentMonth === "all") {
+      setCurrentMonth(12);
       setCurrentYear((prev) => prev - 1);
-      setSelectedMonth(12);
+    } else if (currentMonth === 1) {
+      setCurrentYear((prev) => prev - 1);
+      setCurrentMonth(12);
     } else {
       setCurrentMonth((prev) => prev - 1);
     }
   };
 
+  // 화살표 다음 월 이동
   const handleNextMonth = () => {
-    if (currentMonth === 12) {
+    if (currentMonth === "all") {
+      setCurrentMonth(1);
+    } else if (currentMonth === 12) {
       setCurrentYear((prev) => prev + 1);
       setCurrentMonth(1);
     } else {
@@ -149,11 +157,30 @@ export default function ContractsPage() {
     }
   };
 
-  const filteredContracts = contracts.filter(
-    (item) =>
-      item.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.manager.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // 🎯 계약 시작 월 필터링 + 검색 + 내림차순 정렬(최근 계약일이 위로)
+  const filteredContracts = contracts
+    .filter((item) => {
+      // 1. 검색어 필터링
+      const matchesSearch =
+        item.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.manager.toLowerCase().includes(searchTerm.toLowerCase());
+
+      if (!matchesSearch) return false;
+
+      // 2. 전체 보기 선택 시 날짜 조건 없이 통과
+      if (currentMonth === "all") return true;
+
+      // 3. 선택된 연도/월과 계약 시작일(startDate) 일치 여부 검사
+      if (!item.startDate) return false;
+      const dateParts = item.startDate.split("-");
+      if (dateParts.length < 2) return false;
+
+      const contractYear = Number(dateParts[0]);
+      const contractMonth = Number(dateParts[1]);
+
+      return contractYear === currentYear && contractMonth === currentMonth;
+    })
+    .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || "")); // 내림차순 정렬
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA] text-gray-900">
@@ -168,6 +195,7 @@ export default function ContractsPage() {
                 <FileText className="text-blue-600" size={24} /> 계약 관리
               </h1>
 
+              {/* 월 선택 드롭다운 팝업 */}
               <div className="relative" ref={monthPickerRef}>
                 <div className="flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-xl font-bold text-sm shadow-sm">
                   <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 rounded-lg">
@@ -177,7 +205,7 @@ export default function ContractsPage() {
                     onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
                     className="px-2 hover:text-blue-600 transition-colors"
                   >
-                    {`${currentYear % 100}년 ${currentMonth}월`}
+                    {currentMonth === "all" ? "전체 보기" : `${currentYear % 100}년 ${currentMonth}월`}
                   </button>
                   <button onClick={handleNextMonth} className="p-1 hover:bg-gray-100 rounded-lg">
                     <ChevronRight size={16} />
@@ -185,21 +213,39 @@ export default function ContractsPage() {
                 </div>
 
                 {isMonthPickerOpen && (
-                  <div className="absolute top-10 left-0 w-60 p-3 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 grid grid-cols-3 gap-2">
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => {
-                          setCurrentMonth(m);
-                          setIsMonthPickerOpen(false);
-                        }}
-                        className={`py-2 rounded-xl font-bold text-xs transition-all ${
-                          currentMonth === m ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {m}월
-                      </button>
-                    ))}
+                  <div className="absolute top-10 left-0 w-64 p-3 bg-white border border-gray-100 rounded-2xl shadow-xl z-50">
+                    {/* 전체 보기 버튼 */}
+                    <button
+                      onClick={() => {
+                        setCurrentMonth("all");
+                        setIsMonthPickerOpen(false);
+                      }}
+                      className={`w-full mb-2 py-1.5 rounded-xl font-bold text-xs transition-all ${
+                        currentMonth === "all"
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      전체 보기
+                    </button>
+
+                    {/* 1월 ~ 12월 선택 버튼 그리드 */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => {
+                            setCurrentMonth(m);
+                            setIsMonthPickerOpen(false);
+                          }}
+                          className={`py-2 rounded-xl font-bold text-xs transition-all ${
+                            currentMonth === m ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"
+                          }`}
+                        >
+                          {m}월
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -231,7 +277,7 @@ export default function ContractsPage() {
             </div>
           </div>
 
-          {/* 테이블 컨테이너 (오버플로우 방지) */}
+          {/* 테이블 컨테이너 */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
             <table className="w-full text-left text-xs text-gray-600 min-w-[1200px]">
               <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100">
@@ -254,7 +300,7 @@ export default function ContractsPage() {
                 {filteredContracts.length === 0 ? (
                   <tr>
                     <td colSpan={12} className="p-12 text-center text-gray-400 font-bold">
-                      등록된 계약 데이터가 없습니다.
+                      선택한 조건에 해당하는 계약 데이터가 없습니다.
                     </td>
                   </tr>
                 ) : (
@@ -442,7 +488,7 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 12. 액션 (저장 / 취소 / 수정 버튼 고정 영역) */}
+                        {/* 12. 액션 버튼 */}
                         <td className="p-3 text-center whitespace-nowrap sticky right-0 bg-white/90 backdrop-blur-sm">
                           {isEditing ? (
                             <div className="flex items-center justify-center gap-1">
