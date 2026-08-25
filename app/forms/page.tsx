@@ -10,8 +10,8 @@ interface FormItem {
   title: string;
   size: string;
   date: string;
-  requiresAdmin: boolean; // 관리자 요청 필요 여부
-  link?: string; // 🎯 외부 링크 (구글 시트 등) 연결을 위한 선택적 속성 추가
+  requiresAdmin: boolean;
+  downloadUrl?: string; // 🎯 직다운로드 전용 URL
 }
 
 const INITIAL_FORMS: FormItem[] = [
@@ -30,7 +30,8 @@ const INITIAL_FORMS: FormItem[] = [
     size: "180 KB",
     date: "2026-07-15",
     requiresAdmin: false,
-    link: "https://docs.google.com/spreadsheets/d/15UM-_nW4BBFnHYY2O5_KcOps2SW2PvbE/edit?usp=sharing&ouid=110545499907979762994&rtpof=true&sd=true", // 🎯 요청하신 구글 시트 링크 추가
+    // 🎯 구글 스프레드시트를 .xlsx 엑셀 파일로 즉시 다운로드하는 직가공 링크
+    downloadUrl: "https://docs.google.com/spreadsheets/d/15UM-_nW4BBFnHYY2O5_KcOps2SW2PvbE/export?format=xlsx",
   },
   {
     id: "3",
@@ -63,13 +64,18 @@ export default function FormsPage() {
   const [newCategory, setNewCategory] = useState("계약 서식");
   const [newSize, setNewSize] = useState("200 KB");
 
-  // 🎯 다운로드 처리 함수 (링크, 관리자권한, 일반다운로드 분기 처리)
+  // 🎯 엑셀 파일 바로 다운로드 처리 함수
   const handleDownload = (item: FormItem) => {
     if (item.requiresAdmin) {
       alert("관리자에게 요청하시기 바랍니다.");
-    } else if (item.link) {
-      // 링크가 있는 경우 새 탭으로 구글 스프레드시트 오픈
-      window.open(item.link, "_blank", "noopener,noreferrer");
+    } else if (item.downloadUrl) {
+      // hidden anchor 태그를 생성하여 즉시 엑셀 파일(.xlsx) 저장 실행
+      const a = document.createElement("a");
+      a.href = item.downloadUrl;
+      a.setAttribute("download", `${item.title}.xlsx`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } else {
       alert(`'${item.title}' 서식 다운로드를 시작합니다.`);
     }
@@ -189,11 +195,11 @@ export default function FormsPage() {
                     </div>
                   </div>
 
-                  {/* 🎯 다운로드(링크 오픈) 버튼 */}
+                  {/* 🎯 엑셀 파일 즉시 다운로드 버튼 */}
                   <button
                     onClick={() => handleDownload(item)}
                     className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all shrink-0"
-                    title="다운로드/열기"
+                    title="엑셀 다운로드"
                   >
                     <Download size={18} />
                   </button>
