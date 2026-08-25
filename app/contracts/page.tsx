@@ -35,7 +35,6 @@ export default function ContractsPage() {
   const monthPickerRef = useRef<HTMLDivElement>(null);
 
   const [currentYear, setCurrentYear] = useState(2026);
-  // 'all' 또는 숫자(1~12)로 선택 상태 관리 (기본값: 'all' 또는 8월)
   const [currentMonth, setCurrentMonth] = useState<number | "all">("all");
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -132,22 +131,19 @@ export default function ContractsPage() {
     }
   };
 
-  // 화살표 이전 월 이동
+  // 🎯 타입 에러 수정된 이전 월 이동 함수
   const handlePrevMonth = () => {
-    if (currentMonth === "all") {
+    if (typeof currentMonth === "string" || currentMonth === 1) {
       setCurrentMonth(12);
       setCurrentYear((prev) => prev - 1);
-    } else if (currentMonth === 1) {
-      setCurrentYear((prev) => prev - 1);
-      setCurrentMonth(12);
     } else {
       setCurrentMonth((prev) => prev - 1);
     }
   };
 
-  // 화살표 다음 월 이동
+  // 🎯 타입 에러 수정된 다음 월 이동 함수
   const handleNextMonth = () => {
-    if (currentMonth === "all") {
+    if (typeof currentMonth === "string") {
       setCurrentMonth(1);
     } else if (currentMonth === 12) {
       setCurrentYear((prev) => prev + 1);
@@ -157,20 +153,16 @@ export default function ContractsPage() {
     }
   };
 
-  // 🎯 계약 시작 월 필터링 + 검색 + 내림차순 정렬(최근 계약일이 위로)
+  // 계약 시작 월 필터링 + 검색 + 내림차순 정렬
   const filteredContracts = contracts
     .filter((item) => {
-      // 1. 검색어 필터링
       const matchesSearch =
         item.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.manager.toLowerCase().includes(searchTerm.toLowerCase());
 
       if (!matchesSearch) return false;
-
-      // 2. 전체 보기 선택 시 날짜 조건 없이 통과
       if (currentMonth === "all") return true;
 
-      // 3. 선택된 연도/월과 계약 시작일(startDate) 일치 여부 검사
       if (!item.startDate) return false;
       const dateParts = item.startDate.split("-");
       if (dateParts.length < 2) return false;
@@ -180,11 +172,12 @@ export default function ContractsPage() {
 
       return contractYear === currentYear && contractMonth === currentMonth;
     })
-    .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || "")); // 내림차순 정렬
+    .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA] text-gray-900">
-      <Sidebar />
+      {/* 🎯 currentMenu="contracts" 추가로 TS 에러 해결 */}
+      <Sidebar currentMenu="contracts" />
 
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-[1500px] mx-auto">
@@ -195,7 +188,7 @@ export default function ContractsPage() {
                 <FileText className="text-blue-600" size={24} /> 계약 관리
               </h1>
 
-              {/* 월 선택 드롭다운 팝업 */}
+              {/* 월 선택 드롭다운 */}
               <div className="relative" ref={monthPickerRef}>
                 <div className="flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-xl font-bold text-sm shadow-sm">
                   <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 rounded-lg">
@@ -214,7 +207,6 @@ export default function ContractsPage() {
 
                 {isMonthPickerOpen && (
                   <div className="absolute top-10 left-0 w-64 p-3 bg-white border border-gray-100 rounded-2xl shadow-xl z-50">
-                    {/* 전체 보기 버튼 */}
                     <button
                       onClick={() => {
                         setCurrentMonth("all");
@@ -229,7 +221,6 @@ export default function ContractsPage() {
                       전체 보기
                     </button>
 
-                    {/* 1월 ~ 12월 선택 버튼 그리드 */}
                     <div className="grid grid-cols-3 gap-2">
                       {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                         <button
@@ -316,7 +307,6 @@ export default function ContractsPage() {
                           isEditing ? "bg-blue-50/40" : "hover:bg-gray-50/60 cursor-pointer"
                         }`}
                       >
-                        {/* 1. 삭제 마이너스 아이콘 */}
                         <td className="p-3 text-center">
                           {isEditing && (
                             <button
@@ -332,7 +322,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 2. 계약기간 */}
                         <td className="p-3 text-gray-500 whitespace-nowrap">
                           {isEditing ? (
                             <input
@@ -346,7 +335,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 3. 유형 */}
                         <td className="p-3">
                           {isEditing ? (
                             <select
@@ -365,7 +353,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 4. 담당자 */}
                         <td className="p-3">
                           {isEditing ? (
                             <input
@@ -379,7 +366,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 5. 상태 */}
                         <td className="p-3">
                           {isEditing ? (
                             <select
@@ -402,7 +388,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 6. 고객사 */}
                         <td className="p-3 font-bold text-gray-900">
                           {isEditing ? (
                             <input
@@ -416,7 +401,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 7. 판매 상품 */}
                         <td className="p-3 text-blue-600 font-bold">
                           {isEditing ? (
                             <input
@@ -430,7 +414,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 8. 계약 금액 */}
                         <td className="p-3 font-black text-gray-900">
                           {isEditing ? (
                             <input
@@ -444,7 +427,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 9. 결제수단 */}
                         <td className="p-3">
                           {isEditing ? (
                             <input
@@ -458,7 +440,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 10. 세금계산서 */}
                         <td className="p-3">
                           {isEditing ? (
                             <select
@@ -474,7 +455,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 11. 특이사항 */}
                         <td className="p-3 text-gray-400">
                           {isEditing ? (
                             <input
@@ -488,7 +468,6 @@ export default function ContractsPage() {
                           )}
                         </td>
 
-                        {/* 12. 액션 버튼 */}
                         <td className="p-3 text-center whitespace-nowrap sticky right-0 bg-white/90 backdrop-blur-sm">
                           {isEditing ? (
                             <div className="flex items-center justify-center gap-1">
