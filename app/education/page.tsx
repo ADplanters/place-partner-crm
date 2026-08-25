@@ -1,15 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  GraduationCap,
-  BookOpen,
-  Video,
-  FileCheck,
-  ArrowLeft,
-  ExternalLink,
-} from "lucide-react";
+import Sidebar from "../components/Sidebar"; // 사이드바 컴포넌트 불러오기
+import { GraduationCap, BookOpen, Video, FileCheck, ExternalLink } from "lucide-react";
 
 interface EduItem {
   id: number;
@@ -21,7 +14,6 @@ interface EduItem {
 }
 
 export default function EducationPage() {
-  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string>("전체");
 
   const [eduMaterials] = useState<EduItem[]>([
@@ -57,99 +49,100 @@ export default function EducationPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] p-8 text-gray-900">
-      <div className="max-w-6xl mx-auto">
-        {/* 상단 헤더 */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="p-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div>
-              <h1 className="text-2xl font-black flex items-center gap-2">
-                <GraduationCap className="text-purple-600" size={24} /> 교육 자료
-              </h1>
-              <p className="text-xs text-gray-500 font-bold mt-1">
-                영업 역량 강화를 위한 매뉴얼과 교육 자료를 확인하세요.
-              </p>
-            </div>
-          </div>
-        </div>
+    // 🌟 사이드바 레이아웃 구조 적용
+    <div className="flex min-h-screen bg-[#F8F9FA]">
+      {/* 사이드바 컴포넌트 장착 */}
+      <Sidebar currentMenu="education" />
 
-        {/* 카테고리 탭 */}
-        <div className="flex gap-2 mb-6">
-          {["전체", "가이드", "동영상", "매뉴얼"].map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                selectedCategory === cat
-                  ? "bg-purple-600 text-white shadow-sm"
-                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* 교육 자료 카드 목록 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {filteredMaterials.map((item) => (
-            <div
-              key={item.id}
-              className="p-6 rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col justify-between hover:border-purple-200 transition-all"
-            >
+      {/* 메인 콘텐츠 영역 */}
+      <main className="flex-1 p-8 overflow-y-auto">
+        <div className="max-w-6xl mx-auto">
+          {/* 상단 헤더 */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
               <div>
-                <div className="flex justify-between items-center mb-4">
-                  <span
-                    className={`p-3 rounded-xl ${
-                      item.type === "동영상"
-                        ? "bg-red-50 text-red-600"
-                        : item.type === "가이드"
-                        ? "bg-purple-50 text-purple-600"
-                        : "bg-blue-50 text-blue-600"
-                    }`}
-                  >
-                    {item.type === "동영상" ? (
-                      <Video size={20} />
-                    ) : item.type === "가이드" ? (
-                      <BookOpen size={20} />
-                    ) : (
-                      <FileCheck size={20} />
-                    )}
-                  </span>
-                  <span className="text-[10px] font-bold text-gray-400">
-                    {item.readTime}
-                  </span>
-                </div>
-
-                <h3 className="font-bold text-base text-gray-900 mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-xs text-gray-500 leading-relaxed mb-6">
-                  {item.desc}
+                <h1 className="text-2xl font-black flex items-center gap-2">
+                  <GraduationCap className="text-purple-600" size={24} /> 교육 자료
+                </h1>
+                <p className="text-xs text-gray-500 font-bold mt-1">
+                  영업 역량 강화를 위한 매뉴얼과 교육 자료를 확인하세요.
                 </p>
               </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <span className="text-[11px] text-gray-400 font-medium">
-                  {item.updatedAt}
-                </span>
-                <button
-                  onClick={() => alert(`'${item.title}' 자료를 열람합니다.`)}
-                  className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:underline"
-                >
-                  자료 보기 <ExternalLink size={14} />
-                </button>
-              </div>
             </div>
-          ))}
+          </div>
+
+          {/* 카테고리 탭 */}
+          <div className="flex gap-2 mb-6">
+            {["전체", "가이드", "동영상", "매뉴얼"].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  selectedCategory === cat
+                    ? "bg-purple-600 text-white shadow-sm"
+                    : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* 교육 자료 카드 목록 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {filteredMaterials.map((item) => (
+              <div
+                key={item.id}
+                className="p-6 rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col justify-between hover:border-purple-200 transition-all"
+              >
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <span
+                      className={`p-3 rounded-xl ${
+                        item.type === "동영상"
+                          ? "bg-red-50 text-red-600"
+                          : item.type === "가이드"
+                          ? "bg-purple-50 text-purple-600"
+                          : "bg-blue-50 text-blue-600"
+                      }`}
+                    >
+                      {item.type === "동영상" ? (
+                        <Video size={20} />
+                      ) : item.type === "가이드" ? (
+                        <BookOpen size={20} />
+                      ) : (
+                        <FileCheck size={20} />
+                      )}
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-400">
+                      {item.readTime}
+                    </span>
+                  </div>
+
+                  <h3 className="font-bold text-base text-gray-900 mb-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs text-gray-500 leading-relaxed mb-6">
+                    {item.desc}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    {item.updatedAt}
+                  </span>
+                  <button
+                    onClick={() => alert(`'${item.title}' 자료를 열람합니다.`)}
+                    className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:underline"
+                  >
+                    자료 보기 <ExternalLink size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
