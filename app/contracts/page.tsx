@@ -143,7 +143,7 @@ export default function ContractsPage() {
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA]">
-      <Sidebar />
+      <Sidebar currentMenu="contracts"/>
 
       <main className="relative flex-1 p-8 h-screen overflow-y-auto">
         {/* 상단 컨트롤 및 액션 버튼 */}
