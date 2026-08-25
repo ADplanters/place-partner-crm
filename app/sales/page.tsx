@@ -74,9 +74,9 @@ export default function SalesPage() {
         const d = docSnap.data();
         list.push({
           id: docSnap.id,
-          date: d.date || "8. 25.",
+          date: d.date || new Date().toISOString().split("T")[0],
           status: d.status || "신규가망",
-          manager: d.manager || (userNames[0] || "매니저 1"),
+          manager: d.manager || (userNames[0] || "애드플랜터스"),
           company: d.company || "업체명",
           phone: d.phone || "",
           address: d.address || "",
@@ -98,13 +98,14 @@ export default function SalesPage() {
     return () => unsubscribe();
   }, []);
 
-  // 빈 행 추가
+  // 빈 행 추가 (오늘 날짜 자동 입력)
   const handleAddEmptyRow = async () => {
     try {
+      const todayStr = new Date().toISOString().split("T")[0];
       const newRecord = {
-        date: "오늘",
+        date: todayStr,
         status: "신규가망",
-        manager: managersList[0] || "매니저 1",
+        manager: managersList[0] || "애드플랜터스",
         company: "새 고객사",
         phone: "",
         address: "",
@@ -244,7 +245,7 @@ export default function SalesPage() {
               <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100">
                 <tr>
                   <th className="p-3 w-10 text-center"></th>
-                  <th className="p-3 w-24">날짜</th>
+                  <th className="p-3 w-36">날짜</th>
                   <th className="p-3 w-28">상태</th>
                   <th className="p-3 w-28">담당자</th>
                   <th className="p-3 w-36">업체명</th>
@@ -276,7 +277,7 @@ export default function SalesPage() {
                           isEditing ? "bg-blue-50/40" : "hover:bg-gray-50/60 cursor-pointer"
                         }`}
                       >
-                        {/* 🔴 삭제 버튼 */}
+                        {/* 삭제 버튼 */}
                         <td className="p-3 text-center">
                           {isEditing && (
                             <button
@@ -292,14 +293,14 @@ export default function SalesPage() {
                           )}
                         </td>
 
-                        {/* 날짜 */}
+                        {/* 🎯 날짜: 달력 피커(Date Picker) 적용 */}
                         <td className="p-3">
                           {isEditing ? (
                             <input
-                              type="text"
+                              type="date"
                               value={editForm.date || ""}
                               onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                              className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                              className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none cursor-pointer bg-white"
                             />
                           ) : (
                             item.date
@@ -327,7 +328,7 @@ export default function SalesPage() {
                           )}
                         </td>
 
-                        {/* 🎯 담당자 드롭다운 (팀원 DB 연동) */}
+                        {/* 담당자 드롭다운 */}
                         <td className="p-3">
                           {isEditing ? (
                             <select
