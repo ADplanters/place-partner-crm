@@ -22,6 +22,7 @@ import {
   Globe,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -29,9 +30,12 @@ export default function DashboardPage() {
   const notificationRef = useRef<HTMLDivElement>(null);
   const monthPickerRef = useRef<HTMLDivElement>(null);
 
+  // 로딩 상태 (이 값이 false가 되어야 메인 화면 렌더링)
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
   // 유저 및 권한 상태
-  const [userName, setUserName] = useState("사용자");
-  const [userTeam, setUserTeam] = useState("영업팀");
+  const [userName, setUserName] = useState("");
+  const [userTeam, setUserTeam] = useState("");
 
   // 날짜 선택 상태
   const [selectedYear, setSelectedYear] = useState(2026);
@@ -43,14 +47,14 @@ export default function DashboardPage() {
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
-  // 매출 목표 및 월별 집계 데이터
-  const [monthlyGoal, setMonthlyGoal] = useState(10000000);
-  const [annualGoal, setAnnualGoal] = useState(120000000);
+  // 매출 목표 및 월별 집계 데이터 (기본값 설정 없이 빈 데이터)
+  const [monthlyGoal, setMonthlyGoal] = useState(0);
+  const [annualGoal, setAnnualGoal] = useState(0);
   const [monthlySalesMap, setMonthlySalesMap] = useState<number[]>(Array(12).fill(0));
 
   // 모달 입력용 임시 데이터
-  const [tempMonthlyGoal, setTempMonthlyGoal] = useState(monthlyGoal);
-  const [tempAnnualGoal, setTempAnnualGoal] = useState(annualGoal);
+  const [tempMonthlyGoal, setTempMonthlyGoal] = useState(0);
+  const [tempAnnualGoal, setTempAnnualGoal] = useState(0);
 
   // DB 연동 알림 데이터
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -69,12 +73,11 @@ export default function DashboardPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // DB에서 실제 알림 데이터 불러오기 (승인 대기 유저 + 최근 계약)
+  // DB에서 실제 알림 데이터 불러오기
   const fetchRealNotifications = async () => {
     try {
       const realNotifs: any[] = [];
 
-      // 1. 가입 승인 대기 유저 조회
       const pendingSnap = await getDocs(query(collection(db, "users"), where("role", "==", "pending")));
       pendingSnap.forEach((docSnap) => {
         const u = docSnap.data();
@@ -87,7 +90,6 @@ export default function DashboardPage() {
         });
       });
 
-      // 2. 최근 등록된 계약 건 조회
       const contractsSnap = await getDocs(query(collection(db, "contracts"), limit(5)));
       contractsSnap.forEach((docSnap) => {
         const c = docSnap.data();
@@ -155,20 +157,33 @@ export default function DashboardPage() {
         const goalSnap = await getDoc(doc(db, "settings", "salesGoal"));
         if (goalSnap.exists()) {
           const data = goalSnap.data();
-          setMonthlyGoal(data.monthlyGoal || 10000000);
-          setAnnualGoal(data.annualGoal || 120000000);
-          setTempMonthlyGoal(data.monthlyGoal || 10000000);
-          setTempAnnualGoal(data.annualGoal || 120000000);
+          const loadedMonthly = data.monthlyGoal || 10000000;
+          const loadedAnnual = data.annualGoal || 120000000;
+          setMonthlyGoal(loadedMonthly);
+          setAnnualGoal(loadedAnnual);
+          setTempMonthlyGoal(loadedMonthly);
+          setTempAnnualGoal(loadedAnnual);
+        } else {
+          // 목표치가 없을 경우 기본값 세팅
+          setMonthlyGoal(10000000);
+          setAnnualGoal(120000000);
+          setTempMonthlyGoal(10000000);
+          setTempAnnualGoal(120000000);
         }
 
-        fetchDashboardData(selectedYear);
-        fetchRealNotifications();
+        await fetchDashboardData(selectedYear);
+        await fetchRealNotifications();
+
+        // 모든 데이터를 받아온 뒤 화면 렌더링
+        setIsLoadingData(false);
+      } else {
+        // 로그인 상태가 아니면 튕겨내기
+        router.push("/");
       }
     });
     return () => unsubscribe();
-  }, [selectedYear]);
+  }, [selectedYear, router]);
 
-  // 월 이동 조작
   const handlePrevMonth = () => {
     if (selectedMonth === 1) {
       setSelectedYear((prev) => prev - 1);
@@ -212,13 +227,28 @@ export default function DashboardPage() {
     setNotifications(notifications.map((n) => ({ ...n, read: true })));
   };
 
+  // 계산식 방어 코드 (목표가 0일 경우 달성률 분모 계산 오류 방지)
   const currentMonthlySales = monthlySalesMap[selectedMonth - 1] || 0;
   const currentAnnualSales = monthlySalesMap.reduce((acc, curr) => acc + curr, 0);
   const remainingSales = Math.max(0, monthlyGoal - currentMonthlySales);
-  const monthlyAchievementRate = ((currentMonthlySales / monthlyGoal) * 100).toFixed(1);
-  const annualAchievementRate = ((currentAnnualSales / annualGoal) * 100).toFixed(1);
+  
+  const monthlyAchievementRate = monthlyGoal > 0 ? ((currentMonthlySales / monthlyGoal) * 100).toFixed(1) : "0.0";
+  const annualAchievementRate = annualGoal > 0 ? ((currentAnnualSales / annualGoal) * 100).toFixed(1) : "0.0";
+  
   const unreadCount = notifications.filter((n) => !n.read).length;
   const maxSalesInYear = Math.max(...monthlySalesMap, monthlyGoal, 1);
+
+  // 🔥 데이터가 로딩되는 동안에는 로딩 화면 렌더링
+  if (isLoadingData) {
+    return (
+      <div className={`flex min-h-screen items-center justify-center ${isDarkMode ? "bg-gray-900 text-white" : "bg-[#F8F9FA] text-gray-900"}`}>
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin text-blue-600" size={48} />
+          <p className="font-bold text-sm text-gray-500">데이터를 동기화 중입니다...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex min-h-screen ${isDarkMode ? "bg-gray-900 text-white" : "bg-[#F8F9FA] text-gray-900"} transition-colors duration-200`}>
@@ -299,7 +329,7 @@ export default function DashboardPage() {
             </a>
           </div>
 
-          {/* 알림 팝업 창 (실제 DB 데이터 연동) */}
+          {/* 알림 팝업 창 */}
           {isNotificationOpen && (
             <div className={`absolute bottom-16 left-0 w-80 rounded-2xl border shadow-xl p-4 z-50 transition-all ${isDarkMode ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-100 text-gray-900"}`}>
               <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-700">
@@ -342,8 +372,8 @@ export default function DashboardPage() {
           {/* 프로필 및 로그아웃 */}
           <div className={`flex items-center justify-between p-3 rounded-2xl border ${isDarkMode ? "bg-gray-700/50 border-gray-700" : "bg-gray-50 border-gray-100"}`}>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                {userName.slice(0, 1)}
+              <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs uppercase">
+                {userName.charAt(0)}
               </div>
               <div>
                 <div className="text-xs font-bold">{userName}</div>
