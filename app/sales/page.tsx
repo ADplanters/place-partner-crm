@@ -183,7 +183,7 @@ export default function SalesPage() {
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA]">
-      <Sidebar />
+      <Sidebar currentMenu="sales"/>
 
       <main className="relative flex-1 p-8 pb-24 h-screen overflow-y-auto">
         <div className="mb-4">
