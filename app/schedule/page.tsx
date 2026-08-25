@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { auth, db } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore"; // 🎯 doc 추가
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -26,8 +26,8 @@ interface ScheduleEvent {
   memo?: string;
 }
 
-// 🎯 실무 맞춤형 색상 태그 기획 (이 부분이 반영되어야 합니다!)
 const COLOR_OPTIONS = [
+  { label: "총괄/Admin", value: "bg-slate-800 text-white border-slate-900" },
   { label: "대면영업", value: "bg-purple-100 text-purple-700 border-purple-200" },
   { label: "가망건", value: "bg-blue-100 text-blue-700 border-blue-200" },
   { label: "2차콜", value: "bg-emerald-100 text-emerald-700 border-emerald-200" },
@@ -221,7 +221,6 @@ export default function SchedulePage() {
     calendarDays.push(d);
   }
 
-  // 색상 클래스로부터 태그 라벨 명칭 반환
   const getTagLabel = (colorValue?: string) => {
     const found = COLOR_OPTIONS.find((c) => c.value === colorValue);
     return found ? found.label : "일정";
@@ -277,7 +276,6 @@ export default function SchedulePage() {
               </div>
             </div>
 
-            {/* 실무 태그 안내 범례 및 추가 버튼 */}
             <div className="flex items-center gap-3">
               <div className="hidden lg:flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-xl text-[11px] font-bold">
                 {COLOR_OPTIONS.map((c) => (
@@ -342,7 +340,6 @@ export default function SchedulePage() {
                           <span className="opacity-75 mr-1">[{getTagLabel(ev.color)}]</span>
                           {ev.title}
 
-                          {/* 🌟 마우스오버 미리보기 툴팁 */}
                           <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-56 p-3 bg-gray-900 text-white rounded-2xl shadow-2xl z-40 pointer-events-none text-left">
                             <div className="flex items-center justify-between border-b border-gray-700 pb-1.5 mb-1.5">
                               <span className="font-bold text-xs text-blue-300 truncate">📌 {ev.title}</span>
@@ -366,7 +363,7 @@ export default function SchedulePage() {
         </div>
       </main>
 
-      {/* 🌟 1. 신규 일정 등록 모달 */}
+      {/* 1. 신규 일정 등록 모달 */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="w-full max-w-md p-6 bg-white rounded-3xl border border-gray-100 shadow-2xl text-gray-900">
@@ -384,7 +381,7 @@ export default function SchedulePage() {
                 <label className="block text-xs font-bold text-gray-500 mb-1.5">일정 제목</label>
                 <input
                   type="text"
-                  placeholder="예: 미팅, 계약 건 터치 등"
+                  placeholder="예: 미팅, 계약 건 터치, 어드민 운영 등"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:border-blue-600"
@@ -403,9 +400,8 @@ export default function SchedulePage() {
                 />
               </div>
 
-              {/* 🎯 기획된 영업 상태 태그 선택 (버튼 형식) */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">영업 상태 태그</label>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">업무 / 영업 상태 태그</label>
                 <div className="flex flex-wrap gap-1.5">
                   {COLOR_OPTIONS.map((c) => (
                     <button
@@ -455,7 +451,7 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* 🌟 2. 일정 상세 / 수정 / 삭제 모달 */}
+      {/* 2. 일정 상세 / 수정 / 삭제 모달 */}
       {isDetailModalOpen && selectedEvent && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="w-full max-w-md p-6 bg-white rounded-3xl border border-gray-100 shadow-2xl text-gray-900">
@@ -546,7 +542,7 @@ export default function SchedulePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">영업 상태 태그</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">업무 / 영업 상태 태그</label>
                   <div className="flex flex-wrap gap-1.5">
                     {COLOR_OPTIONS.map((c) => (
                       <button
