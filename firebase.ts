@@ -1,9 +1,9 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AiZaSyC35jUgxgVlfsOQQUSGbu91eOGWSvpPHs",
+  apiKey: "AIzaSyC35JUgxgVlfsOQQUSGbu91eOGWSvpPHs", // <- 대문자 J로 정확히 수정됨
   authDomain: "placepartnercrm.firebaseapp.com",
   projectId: "placepartnercrm",
   storageBucket: "placepartnercrm.firebasestorage.app",
@@ -12,7 +12,10 @@ const firebaseConfig = {
   measurementId: "G-D9F9QWP9L7"
 };
 
+// Firebase 앱 초기화 (중복 생성 방지)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+// 다른 페이지에서 사용할 인증 및 DB 객체 내보내기
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const googleProvider = new GoogleAuthProvider();
+export default app;
