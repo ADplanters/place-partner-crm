@@ -16,6 +16,15 @@ interface UserData {
   createdAt?: any;
 }
 
+// 🌟 미슐랭 가이드 컨셉 소속 팀 옵션 (선택 2)
+const TEAM_OPTIONS = [
+  "본사/총괄 디렉터",
+  "3-Star 수석 매니저",
+  "2-Star 전문 매니저",
+  "1-Star 어드바이저",
+  "미배정",
+];
+
 export default function TeamPage() {
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,11 +62,25 @@ export default function TeamPage() {
     }
   };
 
+  // 🌟 소속 팀 변경 핸들러 (파이어베이스 DB 실시간 반영)
+  const handleTeamChange = async (uid: string, newTeam: string) => {
+    try {
+      await updateDoc(doc(db, "users", uid), { team: newTeam });
+      setUsers((prev) =>
+        prev.map((u) => (u.uid === uid ? { ...u, team: newTeam } : u))
+      );
+      alert("소속 팀이 정상적으로 변경되었습니다.");
+    } catch (error) {
+      console.error("팀 변경 실패:", error);
+      alert("소속 팀 변경 중 오류가 발생했습니다.");
+    }
+  };
+
   const handleApprove = async (uid: string, targetRole: "user" | "admin") => {
     try {
       await updateDoc(doc(db, "users", uid), {
         role: targetRole,
-        team: targetRole === "admin" ? "본사/관리자" : "영업팀",
+        team: targetRole === "admin" ? "본사/총괄 디렉터" : "1-Star 어드바이저",
       });
       alert(`[${targetRole === "admin" ? "관리자" : "일반 사용자"}] 권한으로 승인되었습니다.`);
       fetchUsers();
@@ -89,15 +112,11 @@ export default function TeamPage() {
   const activeUsers = users.filter((u) => u.role !== "pending");
 
   return (
-    // 🌟 사이드바 레이아웃 구조 적용
     <div className="flex min-h-screen bg-[#F8F9FA]">
-      {/* 사이드바 컴포넌트 장착 */}
       <Sidebar currentMenu="team" />
 
-      {/* 메인 콘텐츠 영역 */}
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-5xl mx-auto">
-          {/* 상단 헤더 */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-2xl font-black flex items-center gap-2">
@@ -209,7 +228,20 @@ export default function TeamPage() {
                         <tr key={u.uid} className="hover:bg-gray-50">
                           <td className="p-4 font-bold text-gray-900">{u.name}</td>
                           <td className="p-4">{u.email}</td>
-                          <td className="p-4">{u.team || "미배정"}</td>
+                          <td className="p-4">
+                            {/* 🌟 소속 팀 드롭다운 메뉴 적용 */}
+                            <select
+                              value={u.team || "미배정"}
+                              onChange={(e) => handleTeamChange(u.uid, e.target.value)}
+                              className="border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 font-medium text-xs shadow-sm"
+                            >
+                              {TEAM_OPTIONS.map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
                           <td className="p-4">
                             <span
                               className={`px-2.5 py-1 rounded-full text-xs font-bold ${
