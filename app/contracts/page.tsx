@@ -4,7 +4,15 @@ import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { auth, db } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  addDoc,
+} from "firebase/firestore";
 import {
   FileText,
   Plus,
@@ -16,6 +24,8 @@ import {
   X,
   Building2,
   DollarSign,
+  Lock,
+  ExternalLink,
 } from "lucide-react";
 
 interface ContractItem {
@@ -31,6 +41,7 @@ interface ContractItem {
   paymentMethod: string;
   taxInvoice: string;
   note: string;
+  fileUrl?: string; // 🌟 계약서 파일 URL 추가
 }
 
 const PRODUCT_OPTIONS = [
@@ -43,6 +54,11 @@ const PRODUCT_OPTIONS = [
 
 export default function ContractsPage() {
   const monthPickerRef = useRef<HTMLDivElement>(null);
+
+  // 🔒 권한 및 유저 상태
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [currentUserTeam, setCurrentUserTeam] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [currentYear, setCurrentYear] = useState(2026);
   const [currentMonth, setCurrentMonth] = useState<number | "all">("all");
@@ -70,11 +86,16 @@ export default function ContractsPage() {
     paymentMethod: "현금",
     taxInvoice: "미발행",
     note: "",
+    fileUrl: "", // 🌟 계약서 파일 URL
   });
 
+  // 월 선택 드롭다운 외부 클릭 감지
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (monthPickerRef.current && !monthPickerRef.current.contains(event.target as Node)) {
+      if (
+        monthPickerRef.current &&
+        !monthPickerRef.current.contains(event.target as Node)
+      ) {
         setIsMonthPickerOpen(false);
       }
     };
@@ -82,8 +103,40 @@ export default function ContractsPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // 1. 유저 권한 확인 & 데이터 패치
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const uData = userSnap.data();
+            setCurrentUserRole(uData.role || null);
+            setCurrentUserTeam(uData.team || null);
+
+            const isAdminUser =
+              uData.role === "admin" ||
+              uData.team === "본사/총괄 디렉터" ||
+              uData.team === "본사/관리자";
+
+            if (isAdminUser) {
+              fetchData();
+            }
+          }
+        } catch (error) {
+          console.error("유저 정보 확인 실패:", error);
+        }
+      }
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 계약 및 담당자 데이터 불러오기
   const fetchData = async () => {
     try {
+      // 유저 목록에서 담당자 추출
       const usersSnap = await getDocs(collection(db, "users"));
       const userNames: string[] = [];
       usersSnap.forEach((docSnap) => {
@@ -96,6 +149,7 @@ export default function ContractsPage() {
         setNewContract((prev) => ({ ...prev, manager: userNames[0] }));
       }
 
+      // 계약 목록 불러오기
       const querySnapshot = await getDocs(collection(db, "contracts"));
       const list: ContractItem[] = [];
       querySnapshot.forEach((docSnap) => {
@@ -113,6 +167,7 @@ export default function ContractsPage() {
           paymentMethod: d.paymentMethod || "현금",
           taxInvoice: d.taxInvoice || "미발행",
           note: d.note || "",
+          fileUrl: d.fileUrl || "",
         });
       });
       setContracts(list);
@@ -121,13 +176,7 @@ export default function ContractsPage() {
     }
   };
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) fetchData();
-    });
-    return () => unsubscribe();
-  }, []);
-
+  // 신규 계약 생성
   const handleCreateContract = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newContract.clientName.trim()) {
@@ -160,6 +209,7 @@ export default function ContractsPage() {
         paymentMethod: "현금",
         taxInvoice: "미발행",
         note: "",
+        fileUrl: "",
       });
       alert("신규 계약이 성공적으로 등록되었습니다.");
     } catch (error) {
@@ -168,20 +218,27 @@ export default function ContractsPage() {
     }
   };
 
+  // 수정 모드 시작
   const handleStartEdit = (item: ContractItem) => {
     setEditingId(item.id);
     setEditForm({ ...item });
   };
 
+  // 수정 취소
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditForm({});
   };
 
+  // 수정 저장
   const handleSaveEdit = async (id: string) => {
     try {
       await updateDoc(doc(db, "contracts", id), editForm);
-      setContracts(contracts.map((c) => (c.id === id ? ({ ...c, ...editForm } as ContractItem) : c)));
+      setContracts(
+        contracts.map((c) =>
+          c.id === id ? ({ ...c, ...editForm } as ContractItem) : c
+        )
+      );
       setEditingId(null);
       alert("계약 정보가 수정되었습니다.");
     } catch (error) {
@@ -189,6 +246,7 @@ export default function ContractsPage() {
     }
   };
 
+  // 삭제 처리
   const handleDeleteContract = async (id: string, clientName: string) => {
     if (!confirm(`'${clientName}' 계약을 정말 삭제하시겠습니까?`)) return;
 
@@ -202,14 +260,14 @@ export default function ContractsPage() {
     }
   };
 
+  // 날짜 이동
   const handlePrevMonth = () => {
     if (typeof currentMonth === "number") {
       if (currentMonth === 1) {
         setCurrentMonth(12);
         setCurrentYear((prev) => prev - 1);
       } else {
-        const prevMonth: number = currentMonth - 1;
-        setCurrentMonth(prevMonth);
+        setCurrentMonth(currentMonth - 1);
       }
     } else {
       setCurrentMonth(12);
@@ -223,14 +281,20 @@ export default function ContractsPage() {
         setCurrentYear((prev) => prev + 1);
         setCurrentMonth(1);
       } else {
-        const nextMonth: number = currentMonth + 1;
-        setCurrentMonth(nextMonth);
+        setCurrentMonth(currentMonth + 1);
       }
     } else {
       setCurrentMonth(1);
     }
   };
 
+  // 관리자 권한 여부 판단
+  const isAdmin =
+    currentUserRole === "admin" ||
+    currentUserTeam === "본사/총괄 디렉터" ||
+    currentUserTeam === "본사/관리자";
+
+  // 검색 및 월별 필터링
   const filteredContracts = contracts
     .filter((item) => {
       const matchesSearch =
@@ -244,9 +308,20 @@ export default function ContractsPage() {
       const dateParts = item.startDate.split("-");
       if (dateParts.length < 2) return false;
 
-      return Number(dateParts[0]) === currentYear && Number(dateParts[1]) === currentMonth;
+      return (
+        Number(dateParts[0]) === currentYear &&
+        Number(dateParts[1]) === currentMonth
+      );
     })
     .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F8F9FA]">
+        <div className="font-bold text-gray-500 text-sm">권한 확인 중...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#F8F9FA] text-gray-900">
@@ -254,349 +329,493 @@ export default function ContractsPage() {
 
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-[1500px] mx-auto">
+          {/* 상단 헤더 */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-black flex items-center gap-2">
                 <FileText className="text-blue-600" size={24} /> 계약 관리
               </h1>
 
-              <div className="relative" ref={monthPickerRef}>
-                <div className="flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-xl font-bold text-sm shadow-sm">
-                  <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 rounded-lg">
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button
-                    onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
-                    className="px-2 hover:text-blue-600 transition-colors"
-                  >
-                    {currentMonth === "all" ? "전체 보기" : `${currentYear % 100}년 ${currentMonth}월`}
-                  </button>
-                  <button onClick={handleNextMonth} className="p-1 hover:bg-gray-100 rounded-lg">
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-
-                {isMonthPickerOpen && (
-                  <div className="absolute top-10 left-0 w-64 p-3 bg-white border border-gray-100 rounded-2xl shadow-xl z-50">
+              {isAdmin && (
+                <div className="relative" ref={monthPickerRef}>
+                  <div className="flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-xl font-bold text-sm shadow-sm">
                     <button
-                      onClick={() => {
-                        setCurrentMonth("all");
-                        setIsMonthPickerOpen(false);
-                      }}
-                      className={`w-full mb-2 py-1.5 rounded-xl font-bold text-xs transition-all ${
-                        currentMonth === "all"
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                      }`}
+                      onClick={handlePrevMonth}
+                      className="p-1 hover:bg-gray-100 rounded-lg"
                     >
-                      전체 보기
+                      <ChevronLeft size={16} />
                     </button>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                        <button
-                          key={m}
-                          onClick={() => {
-                            setCurrentMonth(m);
-                            setIsMonthPickerOpen(false);
-                          }}
-                          className={`py-2 rounded-xl font-bold text-xs transition-all ${
-                            currentMonth === m ? "bg-blue-600 text-white" : "hover:bg-gray-100 text-gray-700"
-                          }`}
-                        >
-                          {m}월
-                        </button>
-                      ))}
-                    </div>
+                    <button
+                      onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
+                      className="px-2 hover:text-blue-600 transition-colors"
+                    >
+                      {currentMonth === "all"
+                        ? "전체 보기"
+                        : `${currentYear % 100}년 ${currentMonth}월`}
+                    </button>
+                    <button
+                      onClick={handleNextMonth}
+                      className="p-1 hover:bg-gray-100 rounded-lg"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
                   </div>
-                )}
-              </div>
-            </div>
 
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all"
-            >
-              <Plus size={16} /> 신규 계약
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between p-4 mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <div className="text-sm font-bold text-gray-700">
-              현재 등록된 DB 데이터 수: <span className="text-blue-600">{filteredContracts.length}건</span>
-            </div>
-
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
-              <input
-                type="text"
-                placeholder="고객사명 또는 담당자 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-xs font-bold outline-none focus:border-blue-600"
-              />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-            <table className="w-full text-left text-xs text-gray-600 min-w-[1300px]">
-              <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100">
-                <tr>
-                  <th className="p-3 w-10 text-center"></th>
-                  <th className="p-3 w-56">계약기간(시작~종료)</th>
-                  <th className="p-3 w-24">유형</th>
-                  <th className="p-3 w-28">담당자</th>
-                  <th className="p-3 w-28">상태</th>
-                  <th className="p-3 w-32">고객사(업체명)</th>
-                  <th className="p-3 w-40">판매 상품</th>
-                  <th className="p-3 w-28">계약 금액</th>
-                  <th className="p-3 w-20">결제수단</th>
-                  <th className="p-3 w-24">세금계산서</th>
-                  <th className="p-3 min-w-[100px]">특이사항</th>
-                  <th className="p-3 w-28 text-center sticky right-0 bg-gray-50 shadow-l">액션</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 font-medium">
-                {filteredContracts.length === 0 ? (
-                  <tr>
-                    <td colSpan={12} className="p-12 text-center text-gray-400 font-bold">
-                      선택한 조건에 해당하는 계약 데이터가 없습니다.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredContracts.map((item) => {
-                    const isEditing = editingId === item.id;
-
-                    return (
-                      <tr
-                        key={item.id}
-                        onDoubleClick={() => !isEditing && handleStartEdit(item)}
-                        title={!isEditing ? "더블클릭하여 수정하기" : ""}
-                        className={`transition-all ${
-                          isEditing ? "bg-blue-50/40" : "hover:bg-gray-50/60 cursor-pointer"
+                  {isMonthPickerOpen && (
+                    <div className="absolute top-10 left-0 w-64 p-3 bg-white border border-gray-100 rounded-2xl shadow-xl z-50">
+                      <button
+                        onClick={() => {
+                          setCurrentMonth("all");
+                          setIsMonthPickerOpen(false);
+                        }}
+                        className={`w-full mb-2 py-1.5 rounded-xl font-bold text-xs transition-all ${
+                          currentMonth === "all"
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                         }`}
                       >
-                        <td className="p-3 text-center">
-                          {isEditing && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteContract(item.id, item.clientName);
-                              }}
-                              className="text-red-500 hover:text-red-700 transition-transform hover:scale-110"
-                              title="계약 삭제"
-                            >
-                              <MinusCircle size={18} strokeWidth={2.2} />
-                            </button>
-                          )}
-                        </td>
+                        전체 보기
+                      </button>
 
-                        <td className="p-3 text-gray-500 whitespace-nowrap">
-                          {isEditing ? (
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="text"
-                                value={editForm.startDate || ""}
-                                onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
-                                className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                              />
-                              <span className="text-gray-400 font-bold">~</span>
-                              <input
-                                type="text"
-                                value={editForm.endDate || ""}
-                                onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
-                                className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                              />
-                            </div>
-                          ) : (
-                            `${item.startDate} ~ ${item.endDate}`
-                          )}
-                        </td>
+                      <div className="grid grid-cols-3 gap-2">
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                          <button
+                            key={m}
+                            onClick={() => {
+                              setCurrentMonth(m);
+                              setIsMonthPickerOpen(false);
+                            }}
+                            className={`py-2 rounded-xl font-bold text-xs transition-all ${
+                              currentMonth === m
+                                ? "bg-blue-600 text-white"
+                                : "hover:bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {m}월
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
-                        <td className="p-3">
-                          {isEditing ? (
-                            <select
-                              value={editForm.type || "인바운드"}
-                              onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
-                              className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                            >
-                              <option value="인바운드">인바운드</option>
-                              <option value="콜">콜</option>
-                              <option value="아웃바운드">아웃바운드</option>
-                            </select>
-                          ) : (
-                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-[11px] font-bold">
-                              {item.type}
-                            </span>
-                          )}
-                        </td>
+            {isAdmin && (
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all"
+              >
+                <Plus size={16} /> 신규 계약
+              </button>
+            )}
+          </div>
 
-                        <td className="p-3">
-                          {isEditing ? (
-                            <select
-                              value={editForm.manager || ""}
-                              onChange={(e) => setEditForm({ ...editForm, manager: e.target.value })}
-                              className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                            >
-                              {managersList.map((m) => (
-                                <option key={m} value={m}>
-                                  {m}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            item.manager
-                          )}
-                        </td>
+          {/* 🔒 본사/관리자가 아닌 경우 접근 차단 화면 */}
+          {!isAdmin ? (
+            <div className="flex flex-col items-center justify-center p-20 bg-white rounded-3xl border border-gray-100 shadow-sm mt-8">
+              <div className="p-4 bg-red-50 rounded-full mb-4 text-red-500">
+                <Lock size={32} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                접근 권한 제한
+              </h2>
+              <p className="text-gray-500 text-xs font-medium">
+                계약 관리 페이지는 **[본사/관리자]** 권한을 가진 계정만 접근할 수 있습니다.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* 현황 및 검색 바 */}
+              <div className="flex items-center justify-between p-4 mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                <div className="text-sm font-bold text-gray-700">
+                  현재 등록된 DB 데이터 수:{" "}
+                  <span className="text-blue-600">
+                    {filteredContracts.length}건
+                  </span>
+                </div>
 
-                        <td className="p-3">
-                          {isEditing ? (
-                            <select
-                              value={editForm.status || "결제완료"}
-                              onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                              className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold text-blue-600 outline-none"
-                            >
-                              <option value="결제완료">결제완료</option>
-                              <option value="결제대기">결제대기</option>
-                              <option value="계약해지">계약해지</option>
-                            </select>
-                          ) : (
-                            <span
-                              className={`px-2 py-1 rounded-md text-[11px] font-bold ${
-                                item.status === "결제대기" ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"
-                              }`}
-                            >
-                              {item.status}
-                            </span>
-                          )}
-                        </td>
+                <div className="relative w-64">
+                  <Search
+                    className="absolute left-3 top-2.5 text-gray-400"
+                    size={16}
+                  />
+                  <input
+                    type="text"
+                    placeholder="고객사명 또는 담당자 검색..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-xs font-bold outline-none focus:border-blue-600"
+                  />
+                </div>
+              </div>
 
-                        <td className="p-3 font-bold text-gray-900">
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={editForm.clientName || ""}
-                              onChange={(e) => setEditForm({ ...editForm, clientName: e.target.value })}
-                              className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                            />
-                          ) : (
-                            item.clientName
-                          )}
-                        </td>
-
-                        <td className="p-3 font-bold text-blue-600">
-                          {isEditing ? (
-                            <select
-                              value={editForm.productName || PRODUCT_OPTIONS[0]}
-                              onChange={(e) => setEditForm({ ...editForm, productName: e.target.value })}
-                              className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                            >
-                              {PRODUCT_OPTIONS.map((prod) => (
-                                <option key={prod} value={prod}>
-                                  {prod}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            item.productName
-                          )}
-                        </td>
-
-                        <td className="p-3 font-black text-gray-900">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              value={editForm.amount || 0}
-                              onChange={(e) => setEditForm({ ...editForm, amount: Number(e.target.value) })}
-                              className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                            />
-                          ) : (
-                            `₩ ${item.amount.toLocaleString()}`
-                          )}
-                        </td>
-
-                        <td className="p-3">
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={editForm.paymentMethod || ""}
-                              onChange={(e) => setEditForm({ ...editForm, paymentMethod: e.target.value })}
-                              className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                            />
-                          ) : (
-                            item.paymentMethod
-                          )}
-                        </td>
-
-                        <td className="p-3">
-                          {isEditing ? (
-                            <select
-                              value={editForm.taxInvoice || "미발행"}
-                              onChange={(e) => setEditForm({ ...editForm, taxInvoice: e.target.value })}
-                              className="w-full px-1 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                            >
-                              <option value="발행">발행</option>
-                              <option value="미발행">미발행</option>
-                            </select>
-                          ) : (
-                            item.taxInvoice
-                          )}
-                        </td>
-
-                        <td className="p-3 text-gray-400">
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={editForm.note || ""}
-                              onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
-                              className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
-                            />
-                          ) : (
-                            item.note
-                          )}
-                        </td>
-
-                        <td className="p-3 text-center whitespace-nowrap sticky right-0 bg-white/90 backdrop-blur-sm">
-                          {isEditing ? (
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSaveEdit(item.id);
-                                }}
-                                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-md text-xs font-bold shadow-sm transition-all"
-                              >
-                                <Save size={13} /> 저장
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCancelEdit();
-                                }}
-                                className="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-md text-xs font-bold transition-all"
-                              >
-                                <X size={13} /> 취소
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStartEdit(item);
-                              }}
-                              className="text-gray-400 hover:text-blue-600 font-bold underline px-2 py-1"
-                            >
-                              수정
-                            </button>
-                          )}
+              {/* 계약 목록 테이블 */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+                <table className="w-full text-left text-xs text-gray-600 min-w-[1400px]">
+                  <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100">
+                    <tr>
+                      <th className="p-3 w-10 text-center"></th>
+                      <th className="p-3 w-52">계약기간(시작~종료)</th>
+                      <th className="p-3 w-24">유형</th>
+                      <th className="p-3 w-28">담당자</th>
+                      <th className="p-3 w-28">상태</th>
+                      <th className="p-3 w-32">고객사(업체명)</th>
+                      <th className="p-3 w-40">판매 상품</th>
+                      <th className="p-3 w-28">계약 금액</th>
+                      <th className="p-3 w-20">결제수단</th>
+                      <th className="p-3 w-24">세금계산서</th>
+                      <th className="p-3 min-w-[100px]">특이사항</th>
+                      {/* 🌟 신규 추가: 계약서 파일 */}
+                      <th className="p-3 w-32 text-center">계약서 파일</th>
+                      <th className="p-3 w-28 text-center sticky right-0 bg-gray-50 shadow-l">
+                        액션
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 font-medium">
+                    {filteredContracts.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={13}
+                          className="p-12 text-center text-gray-400 font-bold"
+                        >
+                          선택한 조건에 해당하는 계약 데이터가 없습니다.
                         </td>
                       </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                    ) : (
+                      filteredContracts.map((item) => {
+                        const isEditing = editingId === item.id;
+
+                        return (
+                          <tr
+                            key={item.id}
+                            onDoubleClick={() =>
+                              !isEditing && handleStartEdit(item)
+                            }
+                            title={!isEditing ? "더블클릭하여 수정하기" : ""}
+                            className={`transition-all ${
+                              isEditing
+                                ? "bg-blue-50/40"
+                                : "hover:bg-gray-50/60 cursor-pointer"
+                            }`}
+                          >
+                            <td className="p-3 text-center">
+                              {isEditing && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteContract(
+                                      item.id,
+                                      item.clientName
+                                    );
+                                  }}
+                                  className="text-red-500 hover:text-red-700 transition-transform hover:scale-110"
+                                  title="계약 삭제"
+                                >
+                                  <MinusCircle size={18} strokeWidth={2.2} />
+                                </button>
+                              )}
+                            </td>
+
+                            <td className="p-3 text-gray-500 whitespace-nowrap">
+                              {isEditing ? (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="text"
+                                    value={editForm.startDate || ""}
+                                    onChange={(e) =>
+                                      setEditForm({
+                                        ...editForm,
+                                        startDate: e.target.value,
+                                      })
+                                    }
+                                    className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                                  />
+                                  <span className="text-gray-400 font-bold">~</span>
+                                  <input
+                                    type="text"
+                                    value={editForm.endDate || ""}
+                                    onChange={(e) =>
+                                      setEditForm({
+                                        ...editForm,
+                                        endDate: e.target.value,
+                                      })
+                                    }
+                                    className="w-24 px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                                  />
+                                </div>
+                              ) : (
+                                `${item.startDate} ~ ${item.endDate}`
+                              )}
+                            </td>
+
+                            <td className="p-3">
+                              {isEditing ? (
+                                <select
+                                  value={editForm.type || "인바운드"}
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      type: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                                >
+                                  <option value="인바운드">인바운드</option>
+                                  <option value="콜">콜</option>
+                                  <option value="아웃바운드">아웃바운드</option>
+                                </select>
+                              ) : (
+                                <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-[11px] font-bold">
+                                  {item.type}
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="p-3">
+                              {isEditing ? (
+                                <select
+                                  value={editForm.manager || ""}
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      manager: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                                >
+                                  {managersList.map((m) => (
+                                    <option key={m} value={m}>
+                                      {m}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                item.manager
+                              )}
+                            </td>
+
+                            <td className="p-3">
+                              {isEditing ? (
+                                <select
+                                  value={editForm.status || "결제완료"}
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      status: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold text-blue-600 outline-none"
+                                >
+                                  <option value="결제완료">결제완료</option>
+                                  <option value="결제대기">결제대기</option>
+                                  <option value="계약해지">계약해지</option>
+                                </select>
+                              ) : (
+                                <span
+                                  className={`px-2 py-1 rounded-md text-[11px] font-bold ${
+                                    item.status === "결제대기"
+                                      ? "bg-blue-50 text-blue-600"
+                                      : "bg-emerald-50 text-emerald-600"
+                                  }`}
+                                >
+                                  {item.status}
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="p-3 font-bold text-gray-900">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editForm.clientName || ""}
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      clientName: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                                />
+                              ) : (
+                                item.clientName
+                              )}
+                            </td>
+
+                            <td className="p-3 font-bold text-blue-600">
+                              {isEditing ? (
+                                <select
+                                  value={
+                                    editForm.productName || PRODUCT_OPTIONS[0]
+                                  }
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      productName: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-1.5 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                                >
+                                  {PRODUCT_OPTIONS.map((prod) => (
+                                    <option key={prod} value={prod}>
+                                      {prod}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                item.productName
+                              )}
+                            </td>
+
+                            <td className="p-3 font-black text-gray-900">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  value={editForm.amount || 0}
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      amount: Number(e.target.value),
+                                    })
+                                  }
+                                  className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                                />
+                              ) : (
+                                `₩ ${item.amount.toLocaleString()}`
+                              )}
+                            </td>
+
+                            <td className="p-3">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editForm.paymentMethod || ""}
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      paymentMethod: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                                />
+                              ) : (
+                                item.paymentMethod
+                              )}
+                            </td>
+
+                            <td className="p-3">
+                              {isEditing ? (
+                                <select
+                                  value={editForm.taxInvoice || "미발행"}
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      taxInvoice: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-1 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                                >
+                                  <option value="발행">발행</option>
+                                  <option value="미발행">미발행</option>
+                                </select>
+                              ) : (
+                                item.taxInvoice
+                              )}
+                            </td>
+
+                            <td className="p-3 text-gray-400">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editForm.note || ""}
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      note: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-2 py-1 rounded border border-blue-300 text-xs font-bold outline-none"
+                                />
+                              ) : (
+                                item.note || "-"
+                              )}
+                            </td>
+
+                            {/* 🌟 신규 추가: 계약서 파일 보기/수정 */}
+                            <td className="p-3 text-center">
+                              {isEditing ? (
+                                <input
+                                  type="url"
+                                  placeholder="https://..."
+                                  value={editForm.fileUrl || ""}
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      fileUrl: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-1.5 py-1 rounded border border-blue-300 text-[11px] font-medium outline-none"
+                                />
+                              ) : item.fileUrl ? (
+                                <a
+                                  href={item.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-all"
+                                >
+                                  <ExternalLink size={12} /> 파일 보기
+                                </a>
+                              ) : (
+                                <span className="text-gray-300 font-medium text-[11px]">
+                                  미등록
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="p-3 text-center whitespace-nowrap sticky right-0 bg-white/90 backdrop-blur-sm">
+                              {isEditing ? (
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSaveEdit(item.id);
+                                    }}
+                                    className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-md text-xs font-bold shadow-sm transition-all"
+                                  >
+                                    <Save size={13} /> 저장
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCancelEdit();
+                                    }}
+                                    className="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-md text-xs font-bold transition-all"
+                                  >
+                                    <X size={13} /> 취소
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartEdit(item);
+                                  }}
+                                  className="text-gray-400 hover:text-blue-600 font-bold underline px-2 py-1"
+                                >
+                                  수정
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       </main>
 
@@ -608,22 +827,34 @@ export default function ContractsPage() {
               <h2 className="text-lg font-black flex items-center gap-2">
                 <FileText className="text-blue-600" size={20} /> 신규 계약 등록
               </h2>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
                 <X size={20} />
               </button>
             </div>
 
             <form onSubmit={handleCreateContract} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">고객사명 (업체명)</label>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                  고객사명 (업체명)
+                </label>
                 <div className="relative">
-                  <Building2 className="absolute left-3.5 top-3 text-gray-400" size={16} />
-                  {/* 🌟 플레이스 파트너 예시 적용 */}
+                  <Building2
+                    className="absolute left-3.5 top-3 text-gray-400"
+                    size={16}
+                  />
                   <input
                     type="text"
                     placeholder="예: 플레이스 파트너"
                     value={newContract.clientName}
-                    onChange={(e) => setNewContract({ ...newContract, clientName: e.target.value })}
+                    onChange={(e) =>
+                      setNewContract({
+                        ...newContract,
+                        clientName: e.target.value,
+                      })
+                    }
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:border-blue-600"
                     required
                   />
@@ -632,21 +863,35 @@ export default function ContractsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">계약 시작일</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                    계약 시작일
+                  </label>
                   <input
                     type="date"
                     value={newContract.startDate}
-                    onChange={(e) => setNewContract({ ...newContract, startDate: e.target.value })}
+                    onChange={(e) =>
+                      setNewContract({
+                        ...newContract,
+                        startDate: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:border-blue-600"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">계약 종료일</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                    계약 종료일
+                  </label>
                   <input
                     type="date"
                     value={newContract.endDate}
-                    onChange={(e) => setNewContract({ ...newContract, endDate: e.target.value })}
+                    onChange={(e) =>
+                      setNewContract({
+                        ...newContract,
+                        endDate: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:border-blue-600"
                     required
                   />
@@ -655,10 +900,14 @@ export default function ContractsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">유형</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                    유형
+                  </label>
                   <select
                     value={newContract.type}
-                    onChange={(e) => setNewContract({ ...newContract, type: e.target.value })}
+                    onChange={(e) =>
+                      setNewContract({ ...newContract, type: e.target.value })
+                    }
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none"
                   >
                     <option value="인바운드">인바운드</option>
@@ -667,10 +916,17 @@ export default function ContractsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">담당자</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                    담당자
+                  </label>
                   <select
                     value={newContract.manager}
-                    onChange={(e) => setNewContract({ ...newContract, manager: e.target.value })}
+                    onChange={(e) =>
+                      setNewContract({
+                        ...newContract,
+                        manager: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none"
                   >
                     {managersList.map((m) => (
@@ -684,10 +940,17 @@ export default function ContractsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">판매 상품</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                    판매 상품
+                  </label>
                   <select
                     value={newContract.productName}
-                    onChange={(e) => setNewContract({ ...newContract, productName: e.target.value })}
+                    onChange={(e) =>
+                      setNewContract({
+                        ...newContract,
+                        productName: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none text-blue-600"
                   >
                     {PRODUCT_OPTIONS.map((prod) => (
@@ -698,14 +961,24 @@ export default function ContractsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">계약 금액 (원)</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                    계약 금액 (원)
+                  </label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3.5 top-3 text-gray-400" size={16} />
+                    <DollarSign
+                      className="absolute left-3.5 top-3 text-gray-400"
+                      size={16}
+                    />
                     <input
                       type="number"
                       placeholder="2400000"
                       value={newContract.amount}
-                      onChange={(e) => setNewContract({ ...newContract, amount: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setNewContract({
+                          ...newContract,
+                          amount: Number(e.target.value),
+                        })
+                      }
                       className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:border-blue-600"
                       required
                     />
@@ -715,20 +988,34 @@ export default function ContractsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">결제 수단</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                    결제 수단
+                  </label>
                   <input
                     type="text"
                     placeholder="예: 현금, 카드 등"
                     value={newContract.paymentMethod}
-                    onChange={(e) => setNewContract({ ...newContract, paymentMethod: e.target.value })}
+                    onChange={(e) =>
+                      setNewContract({
+                        ...newContract,
+                        paymentMethod: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">세금계산서</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                    세금계산서
+                  </label>
                   <select
                     value={newContract.taxInvoice}
-                    onChange={(e) => setNewContract({ ...newContract, taxInvoice: e.target.value })}
+                    onChange={(e) =>
+                      setNewContract({
+                        ...newContract,
+                        taxInvoice: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none"
                   >
                     <option value="발행">발행</option>
@@ -737,13 +1024,36 @@ export default function ContractsPage() {
                 </div>
               </div>
 
+              {/* 🌟 신규 추가: 계약서 파일 URL 입력 필드 */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">특이사항</label>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                  계약서 파일 URL (선택)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://drive.google.com/... 또는 파일 링크"
+                  value={newContract.fileUrl}
+                  onChange={(e) =>
+                    setNewContract({
+                      ...newContract,
+                      fileUrl: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                  특이사항
+                </label>
                 <input
                   type="text"
                   placeholder="예: 숨고 인입건, 추가 할인 적용 등"
                   value={newContract.note}
-                  onChange={(e) => setNewContract({ ...newContract, note: e.target.value })}
+                  onChange={(e) =>
+                    setNewContract({ ...newContract, note: e.target.value })
+                  }
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold bg-gray-50 outline-none"
                 />
               </div>
