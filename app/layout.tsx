@@ -32,7 +32,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className={inter.className}>{children}</body>
+      {/* 🌟 inter 폰트와 워터마크 배경 클래스를 결합하여 전역 적용 */}
+      <body className={`${inter.className} bg-place-partner`}>
+        {children}
+      </body>
     </html>
   )
 }
