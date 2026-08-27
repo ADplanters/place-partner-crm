@@ -112,7 +112,7 @@ export default function FormsPage() {
   });
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA] text-gray-900">
+    <div className="flex min-h-screen bg-transparent text-gray-900">
       <Sidebar currentMenu="forms" />
 
       <main className="flex-1 p-8 overflow-y-auto">

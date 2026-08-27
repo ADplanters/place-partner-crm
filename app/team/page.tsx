@@ -102,7 +102,7 @@ export default function TeamPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F8F9FA]">
+      <div className="flex min-h-screen items-center justify-center bg-transparent">
         <div className="font-bold text-gray-500">권한 확인 중...</div>
       </div>
     );
@@ -112,7 +112,7 @@ export default function TeamPage() {
   const activeUsers = users.filter((u) => u.role !== "pending");
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA]">
+    <div className="flex min-h-screen bg-transparent">
       <Sidebar currentMenu="team" />
 
       <main className="flex-1 p-8 overflow-y-auto">

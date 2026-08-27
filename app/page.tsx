@@ -85,7 +85,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F8F9FA]">
+    <div className="flex min-h-screen items-center justify-center bg-transparent">
       <div className="flex w-full max-w-lg flex-col items-center px-4">
         {/* 상단 로고 & 타이틀 */}
         <div className="mb-8 flex flex-col items-center text-center">

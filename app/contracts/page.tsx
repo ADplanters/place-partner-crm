@@ -317,14 +317,14 @@ export default function ContractsPage() {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F8F9FA]">
+      <div className="flex min-h-screen items-center justify-center bg-transparent">
         <div className="font-bold text-gray-500 text-sm">권한 확인 중...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA] text-gray-900">
+    <div className="flex min-h-screen bg-transparent text-gray-900">
       <Sidebar currentMenu="contracts" />
 
       <main className="flex-1 p-8 overflow-y-auto">

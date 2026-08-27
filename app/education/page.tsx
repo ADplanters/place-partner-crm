@@ -50,7 +50,7 @@ export default function EducationPage() {
 
   return (
     // 🌟 사이드바 레이아웃 구조 적용
-    <div className="flex min-h-screen bg-[#F8F9FA]">
+    <div className="flex min-h-screen bg-transparent">
       {/* 사이드바 컴포넌트 장착 */}
       <Sidebar currentMenu="education" />
 
