@@ -50,12 +50,12 @@ export default function EducationPage() {
 
   return (
     // 🌟 사이드바 레이아웃 구조 적용
-    <div className="flex min-h-screen bg-transparent">
+    <div className="flex flex-col md:flex-row min-h-screen bg-transparent text-gray-900">
       {/* 사이드바 컴포넌트 장착 */}
       <Sidebar currentMenu="education" />
 
       {/* 메인 콘텐츠 영역 */}
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-6xl mx-auto">
           {/* 상단 헤더 */}
           <div className="flex items-center justify-between mb-8">

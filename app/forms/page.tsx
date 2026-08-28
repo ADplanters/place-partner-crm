@@ -112,10 +112,10 @@ export default function FormsPage() {
   });
 
   return (
-    <div className="flex min-h-screen bg-transparent text-gray-900">
+    <div className="flex flex-col md:flex-row min-h-screen bg-transparent text-gray-900">
       <Sidebar currentMenu="forms" />
 
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-[1400px] mx-auto space-y-6">
           {/* 헤더 */}
           <div className="flex items-center justify-between">
