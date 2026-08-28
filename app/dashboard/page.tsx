@@ -167,13 +167,13 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-transparent text-gray-900">
+    <div className="flex flex-col md:flex-row min-h-screen bg-transparent text-gray-900">
       <Sidebar currentMenu="dashboard" />
 
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-[1300px] mx-auto">
           {/* 상단 타이틀 & 월 선택 영역 */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <h1 className="text-2xl font-black flex items-center gap-2">
               <LayoutDashboard className="text-blue-600" size={24} /> 대시보드
             </h1>
@@ -251,7 +251,7 @@ export default function DashboardPage() {
           </div>
 
           {/* 현황 카드 */}
-          <div className="grid grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden">
               <div className="text-xs font-bold text-gray-400 mb-2">
                 연간 {currentYear}년 누적 (1~12월 합산)
@@ -319,7 +319,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-12 gap-3 h-64 items-end pt-8 pb-2 px-2 border-b border-gray-100">
+            <div className="grid grid-cols-12 gap-1.5 md:gap-3 h-64 items-end pt-8 pb-2 px-1 md:px-2 border-b border-gray-100">
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
                 const sales = monthlySales[m] || 0;
                 const target = monthlyTargets[m] || 1;
@@ -329,7 +329,7 @@ export default function DashboardPage() {
                 return (
                   <div key={m} className="flex flex-col items-center h-full justify-end group relative">
                     {sales > 0 && (
-                      <div className="absolute -top-7 bg-gray-900 text-white text-[10px] font-black px-2 py-0.5 rounded-md whitespace-nowrap shadow-md z-10">
+                      <div className="absolute -top-7 bg-gray-900 text-white text-[9px] md:text-[10px] font-black px-1.5 py-0.5 rounded-md whitespace-nowrap shadow-md z-10">
                         ₩{(sales / 10000).toLocaleString()}만
                       </div>
                     )}
@@ -346,7 +346,7 @@ export default function DashboardPage() {
               })}
             </div>
 
-            <div className="grid grid-cols-12 gap-3 text-center mt-3 text-xs font-bold text-gray-400">
+            <div className="grid grid-cols-12 gap-1.5 md:gap-3 text-center mt-3 text-[10px] md:text-xs font-bold text-gray-400">
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <div
                   key={m}
