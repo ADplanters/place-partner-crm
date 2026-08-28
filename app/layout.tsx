@@ -16,13 +16,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname(); // 🌟 현재 URL 경로 감지
+  const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. 화면 크기 감지 (모바일 기준)
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
@@ -30,7 +29,6 @@ export default function RootLayout({
     checkIsMobile();
     window.addEventListener("resize", checkIsMobile);
 
-    // 2. 유저 권한 확인
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -59,7 +57,7 @@ export default function RootLayout({
     };
   }, []);
 
-  // 🌟 /rank-check 페이지는 퍼블릭 경로로 지정하여 모바일 차단 해제
+  // 공개 라우트 (모바일 제한 예외 대상)
   const isPublicRoute = pathname === "/rank-check";
 
   if (loading && !isPublicRoute) {
@@ -77,7 +75,7 @@ export default function RootLayout({
     );
   }
 
-  // 모바일 접속자 중 비관리자 차단 (단, /rank-check 접속자는 예외 처리)
+  // 모바일 비관리자 차단 (공개 라우트는 예외)
   if (isMobile && !isAdmin && !isPublicRoute) {
     return (
       <html lang="ko">
@@ -94,13 +92,12 @@ export default function RootLayout({
                 모바일 접근이 제한되었습니다
               </h1>
               <p className="text-sm font-medium text-gray-500 mb-6 leading-relaxed">
-                해당 시스템은 보안 및 최적화를 위해
-                <br />
-                <span className="font-bold text-gray-900">PC 환경</span> 또는 <span className="font-bold text-gray-900">본사/관리자 권한</span>
-                <br />
+                해당 시스템은 보안 및 최적화를 위해<br />
+                <span className="font-bold text-gray-900">PC 환경</span> 또는{" "}
+                <span className="font-bold text-gray-900">본사/관리자 권한</span><br />
                 보유 시에만 접속이 가능합니다.
               </p>
-              
+
               <div className="w-full bg-gray-50 p-3 rounded-xl flex items-center gap-2 justify-center text-xs text-gray-400 font-bold">
                 <Lock size={14} /> 현재 접속 기기: 모바일 환경
               </div>
@@ -114,7 +111,6 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        {/* 🌟 모바일 자동 축소 방지 및 반응형 배율 적용 필수 meta 태그 */}
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </head>
       <body className={`${inter.className} bg-place-partner antialiased`}>
