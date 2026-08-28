@@ -227,10 +227,10 @@ export default function SchedulePage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-transparent text-gray-900">
+    <div className="flex flex-col md:flex-row min-h-screen bg-transparent text-gray-900">
       <Sidebar currentMenu="schedule" />
 
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-6xl mx-auto">
           {/* 상단 헤더 및 범례 */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
