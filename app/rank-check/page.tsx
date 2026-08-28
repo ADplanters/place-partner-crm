@@ -335,7 +335,7 @@ export default function RankCheckPage() {
               <p className="text-xs font-medium text-gray-600 leading-relaxed mb-3">
                 상세한 순위 진단 수치 분석과 1페이지 진입을 위한 광고/최적화 가이드는{" "}
                 <span className="font-bold text-gray-900">
-                  담당 디렉터가 10분 내로 [{formData.phone}] 번호로 직접 안내
+                  담당 디렉터가 [{formData.phone}] 번호로 직접 안내
                 </span>
                 해 드릴 예정입니다.
               </p>
