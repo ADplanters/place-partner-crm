@@ -1,6 +1,7 @@
-"use client"; // 화면 크기 및 권한 상태 감지를 위해 Client Component로 변경
+"use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { auth, db } from "../firebase";
@@ -15,20 +16,21 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname(); // 🌟 현재 URL 경로 감지
   const [isMobile, setIsMobile] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. 화면 크기(모바일 여부) 감지 로직
+    // 1. 화면 크기 감지 (모바일 기준)
     const checkIsMobile = () => {
-      setIsMobile(window.innerWidth <= 768); // 가로 해상도 768px 이하를 모바일로 간주
+      setIsMobile(window.innerWidth <= 768);
     };
 
-    checkIsMobile(); // 초기 로드 시 감지
-    window.addEventListener("resize", checkIsMobile); // 리사이즈 이벤트 시 감지
+    checkIsMobile();
+    window.addEventListener("resize", checkIsMobile);
 
-    // 2. 유저 권한 확인 로직
+    // 2. 유저 권한 확인
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -57,10 +59,15 @@ export default function RootLayout({
     };
   }, []);
 
-  // 로딩 중 화면 (깜빡임 방지)
-  if (loading) {
+  // 🌟 /rank-check 페이지는 퍼블릭 경로로 지정하여 모바일 차단 해제
+  const isPublicRoute = pathname === "/rank-check";
+
+  if (loading && !isPublicRoute) {
     return (
       <html lang="ko">
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        </head>
         <body className={`${inter.className} bg-place-partner`}>
           <div className="flex h-screen items-center justify-center">
             <div className="font-bold text-gray-400 text-sm">환경 설정 확인 중...</div>
@@ -70,11 +77,13 @@ export default function RootLayout({
     );
   }
 
-  // 🌟 [핵심] 모바일 기기인데, 관리자가 아닌 경우 -> 차단 화면 렌더링
-  if (isMobile && !isAdmin) {
+  // 모바일 접속자 중 비관리자 차단 (단, /rank-check 접속자는 예외 처리)
+  if (isMobile && !isAdmin && !isPublicRoute) {
     return (
       <html lang="ko">
-        <title>PLACE PARTNER | 모바일 접근 제한</title>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        </head>
         <body className={`${inter.className} bg-place-partner`}>
           <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
             <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-2xl max-w-sm w-full flex flex-col items-center">
@@ -102,10 +111,12 @@ export default function RootLayout({
     );
   }
 
-  // 모바일이지만 관리자이거나, PC 접속인 경우 정상 렌더링
   return (
     <html lang="ko">
-      <title>PLACE PARTNER | 영업 관리 시스템</title>
+      <head>
+        {/* 🌟 모바일 자동 축소 방지 및 반응형 배율 적용 필수 meta 태그 */}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+      </head>
       <body className={`${inter.className} bg-place-partner antialiased`}>
         {children}
       </body>
