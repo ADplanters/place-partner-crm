@@ -259,7 +259,7 @@ export default function RankCheckPage() {
       </div>
 
       <div className="mt-6 text-center text-xs font-medium text-gray-400">
-        입력하신 정보는 진단 리포트 발송 목적으로만 사용되며 안전하게 처리됩니다.
+        입력하신 정보는 진단 리포트 발송 및 맞춤 최적화 솔루션 안내를 위해 활용되며 안전하게 처리됩니다.
       </div>
     </div>
   );
