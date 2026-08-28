@@ -16,7 +16,7 @@ interface UserData {
   createdAt?: any;
 }
 
-// 🌟 미슐랭 가이드 컨셉 소속 팀 옵션 (선택 2)
+// 🌟 미슐랭 가이드 컨셉 소속 팀 옵션
 const TEAM_OPTIONS = [
   "본사/총괄 디렉터",
   "3-Star 수석 매니저",
@@ -112,11 +112,12 @@ export default function TeamPage() {
   const activeUsers = users.filter((u) => u.role !== "pending");
 
   return (
-    <div className="flex min-h-screen bg-transparent">
+    <div className="flex flex-col md:flex-row min-h-screen bg-transparent text-gray-900">
       <Sidebar currentMenu="team" />
 
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-5xl mx-auto">
+          {/* 상단 헤더 */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-2xl font-black flex items-center gap-2">
@@ -129,10 +130,12 @@ export default function TeamPage() {
           </div>
 
           {currentUserRole !== "admin" ? (
-            <div className="flex flex-col items-center justify-center p-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+            <div className="flex flex-col items-center justify-center p-12 md:p-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
               <div className="text-4xl mb-4">🔒</div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">접근 권한 없음</h2>
-              <p className="text-gray-500 text-sm font-medium">관리자 계정으로 로그인해야 열람할 수 있습니다.</p>
+              <p className="text-gray-500 text-sm font-medium text-center">
+                관리자 계정으로 로그인해야 열람할 수 있습니다.
+              </p>
             </div>
           ) : (
             <>
@@ -140,7 +143,7 @@ export default function TeamPage() {
               <div className="flex border-b border-gray-200 mb-6">
                 <button
                   onClick={() => setActiveTab("pending")}
-                  className={`pb-3 px-4 font-bold border-b-2 transition-all ${
+                  className={`pb-3 px-4 font-bold text-xs md:text-sm border-b-2 transition-all ${
                     activeTab === "pending"
                       ? "border-red-600 text-red-600"
                       : "border-transparent text-gray-400 hover:text-gray-600"
@@ -150,7 +153,7 @@ export default function TeamPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("active")}
-                  className={`pb-3 px-4 font-bold border-b-2 transition-all ${
+                  className={`pb-3 px-4 font-bold text-xs md:text-sm border-b-2 transition-all ${
                     activeTab === "active"
                       ? "border-red-600 text-red-600"
                       : "border-transparent text-gray-400 hover:text-gray-600"
@@ -162,21 +165,21 @@ export default function TeamPage() {
 
               {/* 승인 대기 탭 */}
               {activeTab === "pending" && (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
                   {pendingUsers.length === 0 ? (
-                    <div className="p-12 text-center text-gray-400 font-medium">
+                    <div className="p-12 text-center text-gray-400 font-medium text-xs">
                       현재 승인 대기 중인 사용자가 없습니다.
                     </div>
                   ) : (
-                    <table className="w-full text-left text-sm text-gray-600">
-                      <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100">
+                    <table className="w-full text-left text-sm text-gray-600 min-w-[600px]">
+                      <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100 text-xs">
                         <tr>
                           <th className="p-4">이름</th>
                           <th className="p-4">이메일</th>
                           <th className="p-4 text-center">승인 / 거절</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-100 text-xs">
                         {pendingUsers.map((u) => (
                           <tr key={u.uid} className="hover:bg-gray-50">
                             <td className="p-4 font-bold text-gray-900">{u.name}</td>
@@ -213,9 +216,9 @@ export default function TeamPage() {
 
               {/* 승인 완료 탭 */}
               {activeTab === "active" && (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                  <table className="w-full text-left text-sm text-gray-600">
-                    <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+                  <table className="w-full text-left text-sm text-gray-600 min-w-[600px]">
+                    <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100 text-xs">
                       <tr>
                         <th className="p-4">이름</th>
                         <th className="p-4">이메일</th>
@@ -223,13 +226,13 @@ export default function TeamPage() {
                         <th className="p-4">권한</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-100 text-xs">
                       {activeUsers.map((u) => (
                         <tr key={u.uid} className="hover:bg-gray-50">
                           <td className="p-4 font-bold text-gray-900">{u.name}</td>
                           <td className="p-4">{u.email}</td>
                           <td className="p-4">
-                            {/* 🌟 소속 팀 드롭다운 메뉴 적용 */}
+                            {/* 소속 팀 드롭다운 메뉴 */}
                             <select
                               value={u.team || "미배정"}
                               onChange={(e) => handleTeamChange(u.uid, e.target.value)}
@@ -244,7 +247,7 @@ export default function TeamPage() {
                           </td>
                           <td className="p-4">
                             <span
-                              className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                              className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
                                 u.role === "admin"
                                   ? "bg-purple-100 text-purple-700"
                                   : "bg-green-100 text-green-700"
