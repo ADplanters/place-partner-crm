@@ -9,7 +9,6 @@ import {
   Phone,
   User,
   AlertCircle,
-  TrendingUp,
   BarChart3,
   PhoneCall,
   RefreshCw,
@@ -290,7 +289,6 @@ export default function RankCheckPage() {
       {/* 3. 진단 결과 실시간 대시보드 화면 */}
       {step === "result" && (
         <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
-          {/* 결과를 알리는 헤더 */}
           <div className="bg-gray-900 text-white p-6 text-center">
             <div className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 text-white text-[11px] font-bold rounded-full mb-2">
               <Award size={13} /> 진단 분석 리포트 완료
@@ -299,7 +297,6 @@ export default function RankCheckPage() {
           </div>
 
           <div className="p-6 md:p-8 space-y-6">
-            {/* 키워드 및 진단 종합 요약 카드리스트 */}
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200/80 space-y-3">
               <div className="flex justify-between items-center text-xs">
                 <span className="font-bold text-gray-500">진단 키워드</span>
@@ -313,20 +310,19 @@ export default function RankCheckPage() {
               </div>
             </div>
 
-            {/* 진단 순위 리포트 박스 */}
+            {/* 진단 순위 리포트 박스 (오타 수정 위치) */}
             <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 text-center">
               <div className="text-xs font-bold text-gray-500 mb-1">
                 [{formData.keyword}] 키워드 통합 검색
               </div>
               <div className="text-3xl font-black text-gray-900 my-2">
-                추정 순위: <span className="text-red-600">권권 밖 (3페이지 이하)</span>
+                추정 순위: <span className="text-red-600">순위권 밖 (3페이지 이하)</span>
               </div>
               <p className="text-xs font-medium text-gray-600 leading-relaxed mt-2">
                 현재 플레이스 세팅 지수가 낮아 타겟 키워드 검색 시 상위 노출에 어려움을 겪고 있습니다.
               </p>
             </div>
 
-            {/* 영업 전화 간접 안내 및 1:1 컨설팅 카드 */}
             <div className="bg-white p-5 rounded-2xl border-2 border-blue-600 shadow-sm relative overflow-hidden">
               <div className="flex items-center gap-2 mb-2 text-blue-600">
                 <PhoneCall size={18} className="animate-bounce" />
@@ -335,7 +331,7 @@ export default function RankCheckPage() {
               <p className="text-xs font-medium text-gray-600 leading-relaxed mb-3">
                 상세한 순위 진단 수치 분석과 1페이지 진입을 위한 광고/최적화 가이드는{" "}
                 <span className="font-bold text-gray-900">
-                  담당 디렉터가 [{formData.phone}] 번호로 직접 안내
+                  담당 디렉터가 10분 내로 [{formData.phone}] 번호로 직접 안내
                 </span>
                 해 드릴 예정입니다.
               </p>
@@ -344,7 +340,6 @@ export default function RankCheckPage() {
               </div>
             </div>
 
-            {/* 다시 조회하기 버튼 */}
             <button
               onClick={() => {
                 setStep("form");
