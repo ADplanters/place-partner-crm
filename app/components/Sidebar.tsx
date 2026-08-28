@@ -21,10 +21,11 @@ import {
   User,
   Menu,
   X,
+  Database,
 } from "lucide-react";
 
 interface SidebarProps {
-  currentMenu: "dashboard" | "schedule" | "sales" | "contracts" | "forms" | "education" | "team";
+  currentMenu: "dashboard" | "schedule" | "sales" | "contracts" | "forms" | "education" | "team" | "leads";
 }
 
 export default function Sidebar({ currentMenu }: SidebarProps) {
@@ -34,9 +35,10 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
   // 모바일 토글 메뉴 상태
   const [isOpen, setIsOpen] = useState(false);
 
-  // 기존 사용자 및 알림 상태
+  // 사용자, 관리자 여부 및 알림 상태
   const [userName, setUserName] = useState("사용자");
   const [userTeam, setUserTeam] = useState("영업팀");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -93,7 +95,15 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
         setUserName(user.displayName || "담당자");
         const userSnap = await getDoc(doc(db, "users", user.uid));
         if (userSnap.exists()) {
-          setUserTeam(userSnap.data().team || "영업팀");
+          const uData = userSnap.data();
+          setUserTeam(uData.team || "영업팀");
+
+          // 본사/관리자 권한 판단
+          const hasAdminRole =
+            uData.role === "admin" ||
+            uData.team === "본사/총괄 디렉터" ||
+            uData.team === "본사/관리자";
+          setIsAdmin(hasAdminRole);
         }
         fetchRealNotifications();
       }
@@ -112,7 +122,8 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const menuItems = [
+  // 기본 메뉴 목록
+  const baseMenuItems = [
     { key: "dashboard", label: "대시보드", icon: LayoutDashboard, path: "/dashboard" },
     { key: "schedule", label: "통합 일정", icon: Calendar, path: "/schedule" },
     { key: "sales", label: "영업 결과 관리", icon: PhoneCall, path: "/sales" },
@@ -122,9 +133,18 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
     { key: "team", label: "팀원 관리", icon: UsersIcon, path: "/team" },
   ];
 
+  // 🌟 관리자 권한 있을 때만 '진단 신청 DB' 메뉴 추가
+  const menuItems = isAdmin
+    ? [
+        ...baseMenuItems.slice(0, 3),
+        { key: "leads", label: "진단 신청 DB", icon: Database, path: "/leads" },
+        ...baseMenuItems.slice(3),
+      ]
+    : baseMenuItems;
+
   return (
     <>
-      {/* 🌟 모바일 전용 상단 헤더 바 (모바일 기기 접속 시 노출) */}
+      {/* 🌟 모바일 전용 상단 헤더 바 */}
       <div
         className={`md:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-40 w-full shadow-sm ${
           isDarkMode ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200 text-gray-900"
@@ -153,14 +173,14 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
         />
       )}
 
-      {/* 🌟 사이드바 본체 (PC: 좌측 고정 / 모바일: 슬라이드 드로어) */}
+      {/* 🌟 사이드바 본체 */}
       <aside
         className={`fixed md:static top-0 left-0 z-50 h-full w-64 border-r flex flex-col justify-between p-6 transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } ${isDarkMode ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-100 text-gray-900"}`}
       >
         <div>
-          {/* 로고 디자인 */}
+          {/* 로고 */}
           <div
             onClick={() => {
               setIsOpen(false);
@@ -186,20 +206,25 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
                   }}
                   className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all ${
                     isActive
-                      ? "bg-blue-50 text-blue-600"
+                      ? "bg-blue-50 text-blue-600 shadow-sm"
                       : isDarkMode
                       ? "hover:bg-gray-700 text-gray-300"
                       : "hover:bg-gray-50 text-gray-600"
                   }`}
                 >
                   <Icon size={18} /> {item.label}
+                  {item.key === "leads" && (
+                    <span className="ml-auto bg-red-100 text-red-600 text-[10px] px-1.5 py-0.5 rounded-full font-black">
+                      HOT
+                    </span>
+                  )}
                 </button>
               );
             })}
           </nav>
         </div>
 
-        {/* 하단 유틸리티 (다크모드, 알림, 외부링크, 프로필) */}
+        {/* 하단 유틸리티 */}
         <div className="space-y-4 relative" ref={notificationRef}>
           <div className="flex items-center gap-2">
             <button
@@ -295,7 +320,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
             </div>
           )}
 
-          {/* 프로필 카드리스트 */}
+          {/* 프로필 카드 */}
           <div
             className={`flex items-center justify-between p-3 rounded-2xl border ${
               isDarkMode ? "bg-gray-700/50 border-gray-700" : "bg-gray-50 border-gray-100"
