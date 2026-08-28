@@ -41,7 +41,7 @@ interface ContractItem {
   paymentMethod: string;
   taxInvoice: string;
   note: string;
-  fileUrl?: string; // 🌟 계약서 파일 URL 추가
+  fileUrl?: string; // 🌟 계약서 파일 URL
 }
 
 const PRODUCT_OPTIONS = [
@@ -86,7 +86,7 @@ export default function ContractsPage() {
     paymentMethod: "현금",
     taxInvoice: "미발행",
     note: "",
-    fileUrl: "", // 🌟 계약서 파일 URL
+    fileUrl: "",
   });
 
   // 월 선택 드롭다운 외부 클릭 감지
@@ -136,7 +136,6 @@ export default function ContractsPage() {
   // 계약 및 담당자 데이터 불러오기
   const fetchData = async () => {
     try {
-      // 유저 목록에서 담당자 추출
       const usersSnap = await getDocs(collection(db, "users"));
       const userNames: string[] = [];
       usersSnap.forEach((docSnap) => {
@@ -149,7 +148,6 @@ export default function ContractsPage() {
         setNewContract((prev) => ({ ...prev, manager: userNames[0] }));
       }
 
-      // 계약 목록 불러오기
       const querySnapshot = await getDocs(collection(db, "contracts"));
       const list: ContractItem[] = [];
       querySnapshot.forEach((docSnap) => {
@@ -324,13 +322,13 @@ export default function ContractsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-transparent text-gray-900">
+    <div className="flex flex-col md:flex-row min-h-screen bg-transparent text-gray-900">
       <Sidebar currentMenu="contracts" />
 
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-[1500px] mx-auto">
           {/* 상단 헤더 */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-black flex items-center gap-2">
                 <FileText className="text-blue-600" size={24} /> 계약 관리
@@ -404,7 +402,7 @@ export default function ContractsPage() {
             {isAdmin && (
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all self-start sm:self-auto"
               >
                 <Plus size={16} /> 신규 계약
               </button>
@@ -413,21 +411,21 @@ export default function ContractsPage() {
 
           {/* 🔒 본사/관리자가 아닌 경우 접근 차단 화면 */}
           {!isAdmin ? (
-            <div className="flex flex-col items-center justify-center p-20 bg-white rounded-3xl border border-gray-100 shadow-sm mt-8">
+            <div className="flex flex-col items-center justify-center p-12 md:p-20 bg-white rounded-3xl border border-gray-100 shadow-sm mt-8">
               <div className="p-4 bg-red-50 rounded-full mb-4 text-red-500">
                 <Lock size={32} />
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">
                 접근 권한 제한
               </h2>
-              <p className="text-gray-500 text-xs font-medium">
+              <p className="text-gray-500 text-xs font-medium text-center">
                 계약 관리 페이지는 **[본사/관리자]** 권한을 가진 계정만 접근할 수 있습니다.
               </p>
             </div>
           ) : (
             <>
               {/* 현황 및 검색 바 */}
-              <div className="flex items-center justify-between p-4 mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
                 <div className="text-sm font-bold text-gray-700">
                   현재 등록된 DB 데이터 수:{" "}
                   <span className="text-blue-600">
@@ -435,7 +433,7 @@ export default function ContractsPage() {
                   </span>
                 </div>
 
-                <div className="relative w-64">
+                <div className="relative w-full sm:w-64">
                   <Search
                     className="absolute left-3 top-2.5 text-gray-400"
                     size={16}
@@ -466,7 +464,6 @@ export default function ContractsPage() {
                       <th className="p-3 w-20">결제수단</th>
                       <th className="p-3 w-24">세금계산서</th>
                       <th className="p-3 min-w-[100px]">특이사항</th>
-                      {/* 🌟 신규 추가: 계약서 파일 */}
                       <th className="p-3 w-32 text-center">계약서 파일</th>
                       <th className="p-3 w-28 text-center sticky right-0 bg-gray-50 shadow-l">
                         액션
@@ -742,7 +739,7 @@ export default function ContractsPage() {
                               )}
                             </td>
 
-                            {/* 🌟 신규 추가: 계약서 파일 보기/수정 */}
+                            {/* 계약서 파일 보기/수정 */}
                             <td className="p-3 text-center">
                               {isEditing ? (
                                 <input
@@ -821,7 +818,7 @@ export default function ContractsPage() {
 
       {/* 신규 계약 등록 모달 */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-lg p-6 bg-white rounded-3xl border border-gray-100 shadow-2xl text-gray-900 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-black flex items-center gap-2">
@@ -1024,7 +1021,6 @@ export default function ContractsPage() {
                 </div>
               </div>
 
-              {/* 🌟 신규 추가: 계약서 파일 URL 입력 필드 */}
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1.5">
                   계약서 파일 URL (선택)
