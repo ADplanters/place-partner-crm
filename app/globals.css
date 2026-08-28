@@ -12,27 +12,20 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* 글로벌 워터마크 & 격자 배경 패턴 */
+/* 🌟 플레이스파트너 격자 & 워터마크 배경 클래스 */
 .bg-place-partner {
-  background-color: #fcfcfc;
+  background-color: #fcfcfc !important;
   background-image: 
     /* 1. 모눈종이 격자선 */
     linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
     /* 2. 대각선 PLACE PARTNER 워터마크 (SVG) */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Ctext x='40' y='100' fill='%23DC2626' fill-opacity='0.04' font-size='18' font-weight='900' font-family='sans-serif' transform='rotate(-20 150 100)'%3EPLACE PARTNER%3C/text%3E%3C/svg%3E");
-  background-size: 24px 24px, 24px 24px, 300px 200px;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Ctext x='40' y='100' fill='%23DC2626' fill-opacity='0.04' font-size='18' font-weight='900' font-family='sans-serif' transform='rotate(-20 150 100)'%3EPLACE PARTNER%3C/text%3E%3C/svg%3E") !important;
+  background-size: 24px 24px, 24px 24px, 300px 200px !important;
 }
