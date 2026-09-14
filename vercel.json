@@ -1,0 +1,9 @@
+{
+  // 루트 주소(/) 접속 시 /rank-check 경로의 순위 진단 폼으로 재연결하는 설정
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/rank-check"
+    }
+  ]
+}
