@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+// 🌟 파일 위치가 app/pp-manager/page.tsx 로 이동함에 따라 상대 경로를 ../../firebase 로 정확히 세팅
 import { auth, db } from "../../firebase";
 import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
@@ -49,21 +50,22 @@ export default function LoginPage() {
         if (initialRole === "pending") {
           setIsPending(true);
         } else {
-          router.push("/dashboard");
+          // 🌟 로그인 성공 시 접수된 DB 관리 페이지(/leads)로 자동 이동
+          router.push("/leads");
         }
       } else {
         const userData = userSnap.data();
 
         if (isAdminEmail && userData.role === "pending") {
           await updateDoc(userRef, { role: "admin", team: "본사/관리자" });
-          router.push("/dashboard");
+          router.push("/leads");
           return;
         }
 
         if (userData.role === "pending") {
           setIsPending(true);
         } else {
-          router.push("/dashboard");
+          router.push("/leads");
         }
       }
     } catch (error: any) {
