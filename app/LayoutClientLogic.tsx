@@ -1,3 +1,6 @@
+// 파일 경로: app/LayoutClientLogic.tsx
+// 역할: 파이어베이스 Auth 권한 검증 및 모바일 차단 UI 100% 보존 컴포넌트
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,6 +22,7 @@ export default function LayoutClientLogic({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 접속 기기가 모바일 환경(가로폭 768px 이하)인지 판별
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
@@ -26,6 +30,7 @@ export default function LayoutClientLogic({
     checkIsMobile();
     window.addEventListener("resize", checkIsMobile);
 
+    // 파이어베이스 인증 상태 변경 감지 및 관리자 권한 확인
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -54,12 +59,14 @@ export default function LayoutClientLogic({
     };
   }, []);
 
+  // 🌟 퍼블릭 예외 경로 조건문 (pp-manager 제거 및 /admin 통일)
   const isPublicRoute =
     pathname === "/" ||
     pathname === "/rank-check" ||
-    pathname === "/pp-manager" ||
+    pathname === "/admin" ||
     isAdminDomain; 
 
+  // 로딩 상태 렌더링
   if (loading && !isPublicRoute) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -68,6 +75,7 @@ export default function LayoutClientLogic({
     );
   }
 
+  // 모바일 접속 차단 안내 화면 (원본 UI 100% 보존)
   if (isMobile && !isAdmin && !isPublicRoute) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
