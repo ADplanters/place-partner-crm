@@ -56,7 +56,8 @@ export default function RootLayout({
     };
   }, []);
 
-  // 접속 예외 경로 (메인, 진단폼, 관리자 로그인)
+  // 🌟 접속 예외 경로 (메인, 진단폼, 보안 관리자 로그인/대시보드)
+  // /pp-manager 경로 접속 시 모바일 차단 및 퍼블릭 권한 예외가 정상 작동하도록 통합 유지
   const isPublicRoute =
     pathname === "/" ||
     pathname === "/rank-check" ||
@@ -77,7 +78,7 @@ export default function RootLayout({
     );
   }
 
-  // 모바일 비관리자 차단 로직
+  // 모바일 비관리자 차단 로직 (100% 보존)
   if (isMobile && !isAdmin && !isPublicRoute) {
     return (
       <html lang="ko">
