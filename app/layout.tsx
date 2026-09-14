@@ -8,6 +8,7 @@ import { auth, db } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
+// Google Inter 폰트 설정 (영문 기본 폰트 최적화)
 const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
@@ -19,15 +20,23 @@ export default function RootLayout({
   const [isMobile, setIsMobile] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isAdminDomain, setIsAdminDomain] = useState(false);
 
   useEffect(() => {
+    // 1. 접속 기기 가로폭 반응형 감지 (768px 이하 모바일로 판단)
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
 
+    // 2. 접속 서브도메인 감지 (admin.placepartner.cloud 도메인 여부 감지)
+    if (typeof window !== "undefined" && window.location.hostname.startsWith("admin.")) {
+      setIsAdminDomain(true);
+    }
+
     checkIsMobile();
     window.addEventListener("resize", checkIsMobile);
 
+    // 3. 파이어베이스 사용자 로그인 권한 상태 확인 (관리자/총괄 디렉터 판별)
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -56,13 +65,15 @@ export default function RootLayout({
     };
   }, []);
 
-  // 🌟 접속 예외 경로 (메인, 진단폼, 보안 관리자 로그인/대시보드)
-  // /pp-manager 경로 접속 시 모바일 차단 및 퍼블릭 권한 예외가 정상 작동하도록 통합 유지
+  // 🌟 접속 퍼블릭 예외 경로 설정
+  // 메인 루트(/), 순위진단(/rank-check), 기존 백업 라우트(/pp-manager) 및 admin. 서브도메인 접속 시 예외 처리
   const isPublicRoute =
     pathname === "/" ||
     pathname === "/rank-check" ||
-    pathname === "/pp-manager";
+    pathname === "/pp-manager" ||
+    isAdminDomain;
 
+  // 4. 로딩 중 화면 처리 (퍼블릭 경로가 아닐 때만 렌더링)
   if (loading && !isPublicRoute) {
     return (
       <html lang="ko">
@@ -78,7 +89,7 @@ export default function RootLayout({
     );
   }
 
-  // 모바일 비관리자 차단 로직 (100% 보존)
+  // 5. 모바일 비관리자 접속 차단 안내 화면 (원본 UI 100% 보존)
   if (isMobile && !isAdmin && !isPublicRoute) {
     return (
       <html lang="ko">
@@ -110,6 +121,7 @@ export default function RootLayout({
     );
   }
 
+  // 6. 루트 자식 요소 렌더링
   return (
     <html lang="ko">
       <head>
