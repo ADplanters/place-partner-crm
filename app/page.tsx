@@ -1,6 +1,8 @@
-import { redirect } from "next/navigation";
+// 파일 경로: app/page.tsx
+// 역할: URL 리다이렉팅(이동) 절대 없이, 메인 도메인에서 순위 진단 폼을 즉시 렌더링합니다.
 
-export default function CrmHomePage() {
-  // 메인 접속 시 보안 관리자 경로로 즉시 리다이렉트합니다.
-  redirect("/pp-manager");
+import RankCheckPage from "./rank-check/page";
+
+export default function HomePage() {
+  return <RankCheckPage />;
 }
