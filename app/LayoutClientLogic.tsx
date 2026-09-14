@@ -1,0 +1,96 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { auth, db } from "../firebase"; 
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+
+export default function LayoutClientLogic({ 
+  children, 
+  isAdminDomain 
+}: { 
+  children: React.ReactNode;
+  isAdminDomain: boolean;
+}) {
+  const pathname = usePathname();
+  const [isMobile, setIsMobile] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener("resize", checkIsMobile);
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const uData = userSnap.data();
+            const hasAdminRole =
+              uData.role === "admin" ||
+              uData.team === "본사/총괄 디렉터" ||
+              uData.team === "본사/관리자";
+            setIsAdmin(hasAdminRole);
+          }
+        } catch (error) {
+          console.error("권한 확인 실패:", error);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      window.removeEventListener("resize", checkIsMobile);
+      unsubscribe();
+    };
+  }, []);
+
+  const isPublicRoute =
+    pathname === "/" ||
+    pathname === "/rank-check" ||
+    pathname === "/pp-manager" ||
+    isAdminDomain; 
+
+  if (loading && !isPublicRoute) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="font-bold text-gray-400 text-sm">환경 설정 확인 중...</div>
+      </div>
+    );
+  }
+
+  if (isMobile && !isAdmin && !isPublicRoute) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
+        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-2xl max-w-sm w-full flex flex-col items-center">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 text-3xl">
+            📱
+          </div>
+          <h1 className="text-xl font-black text-gray-900 mb-3">
+            모바일 접근이 제한되었습니다
+          </h1>
+          <p className="text-sm font-medium text-gray-500 mb-6 leading-relaxed">
+            해당 시스템은 보안 및 최적화를 위해<br />
+            <span className="font-bold text-gray-900">PC 환경</span> 또는{" "}
+            <span className="font-bold text-gray-900">본사/관리자 권한</span><br />
+            보유 시에만 접속이 가능합니다.
+          </p>
+          <div className="w-full bg-gray-50 p-3 rounded-xl flex items-center gap-2 justify-center text-xs text-gray-400 font-bold">
+            🔒 현재 접속 기기: 모바일 환경
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
