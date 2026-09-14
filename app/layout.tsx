@@ -60,7 +60,7 @@ export default function RootLayout({
   const isPublicRoute =
     pathname === "/" ||
     pathname === "/rank-check" ||
-    pathname === "/admin";
+    pathname === "/pp-manager";
 
   if (loading && !isPublicRoute) {
     return (
