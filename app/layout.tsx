@@ -57,9 +57,16 @@ export default function RootLayout({
     };
   }, []);
 
-  // 공개 라우트 (모바일 제한 예외 대상)
-  const isPublicRoute = pathname === "/rank-check";
+  // 🌟 [수정 핵심] 공개 라우트 예외 대상 범위 확대
+  // 1. 메인 루트('/') : 리다이렉션 코드 실행을 허용하기 위해 예외 추가
+  // 2. 진단 폼('/rank-check') : 일반 사장님들이 접속해야 하므로 예외 유지가 필요함
+  // 3. 관리자 페이지('/admin') : 대표님이 로그인할 화면이 모바일 차단에 걸리지 않도록 예외 추가
+  const isPublicRoute =
+    pathname === "/" ||
+    pathname === "/rank-check" ||
+    pathname === "/admin";
 
+  // 공개 라우트 접속 시 로딩 락 없이 화면을 즉시 렌더링하도록 처리
   if (loading && !isPublicRoute) {
     return (
       <html lang="ko">
@@ -75,7 +82,7 @@ export default function RootLayout({
     );
   }
 
-  // 모바일 비관리자 차단 (공개 라우트는 예외)
+  // 모바일 비관리자 차단 (공개 라우트는 차단 대상에서 제외)
   if (isMobile && !isAdmin && !isPublicRoute) {
     return (
       <html lang="ko">
