@@ -1,3 +1,4 @@
+// 파일 경로: app/team/page.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -97,6 +98,19 @@ export default function TeamPage() {
       fetchUsers();
     } catch (error) {
       alert("처리 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 🌟 [신규 추가] 승인 완료 팀원 내보내기 (DB 삭제 및 권한 즉시 박탈) 핸들러
+  const handleRemoveMember = async (uid: string, name: string) => {
+    if (!confirm(`정말 [${name}] 팀원을 내보내시겠습니까?\n내보낸 계정은 시스템 접근 권한이 영구 삭제됩니다.`)) return;
+    try {
+      await deleteDoc(doc(db, "users", uid));
+      alert(`[${name}] 팀원이 정상적으로 내보내기(삭제) 처리되었습니다.`);
+      fetchUsers(); // 목록 즉시 갱신
+    } catch (error) {
+      console.error("팀원 내보내기 실패:", error);
+      alert("팀원 내보내기 처리 중 오류가 발생했습니다.");
     }
   };
 
@@ -217,13 +231,15 @@ export default function TeamPage() {
               {/* 승인 완료 탭 */}
               {activeTab === "active" && (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-                  <table className="w-full text-left text-sm text-gray-600 min-w-[600px]">
+                  <table className="w-full text-left text-sm text-gray-600 min-w-[700px]">
                     <thead className="bg-gray-50 text-gray-700 font-bold border-b border-gray-100 text-xs">
                       <tr>
                         <th className="p-4">이름</th>
                         <th className="p-4">이메일</th>
                         <th className="p-4">소속 팀</th>
                         <th className="p-4">권한</th>
+                        {/* 🌟 [신규 추가] 관리 항목 컬럼 헤더 */}
+                        <th className="p-4 text-center">관리</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-xs">
@@ -255,6 +271,15 @@ export default function TeamPage() {
                             >
                               {u.role === "admin" ? "관리자" : "일반유저"}
                             </span>
+                          </td>
+                          {/* 🌟 [신규 추가] 내보내기 버튼 컬럼 */}
+                          <td className="p-4 text-center">
+                            <button
+                              onClick={() => handleRemoveMember(u.uid, u.name)}
+                              className="px-3 py-1.5 bg-red-50 text-red-600 border border-red-100 rounded-lg font-bold hover:bg-red-600 hover:text-white text-xs transition-all shadow-sm"
+                            >
+                              내보내기
+                            </button>
                           </td>
                         </tr>
                       ))}
