@@ -1,4 +1,5 @@
-// 파일 경로: middleware.ts (app 폴더와 동일한 최상단 위치)
+// 파일 경로: middleware.ts (app 폴더 바깥, 프로젝트 최상단)
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -6,12 +7,13 @@ export function middleware(request: NextRequest) {
   const host = request.headers.get('host') || '';
   const url = request.nextUrl;
 
-  // 접속 도메인이 admin.placepartner.cloud 이고, 메인 경로(/)로 접속했을 때
+  // 🌟 admin.placepartner.cloud 도메인으로 메인 경로(/) 접속 시
   if (host.startsWith('admin.') && url.pathname === '/') {
-    // 서버 내부적으로 /admin 폴더를 렌더링합니다.
+    // URL 주소창은 그대로 유지한 채, /admin 폴더 내의 page.tsx를 렌더링합니다.
     return NextResponse.rewrite(new URL('/admin', request.url));
   }
 
+  // 그 외(rank.placepartner.cloud 등)는 통과시킵니다.
   return NextResponse.next();
 }
 
