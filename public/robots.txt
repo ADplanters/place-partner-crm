@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rank.placepartner.cloud/sitemap.xml
