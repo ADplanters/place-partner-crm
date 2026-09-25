@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 
   // 🌟 브라우저 파비콘
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon.png",
   },
 };
 
