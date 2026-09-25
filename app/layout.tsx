@@ -7,7 +7,7 @@ import LayoutClientLogic from "./LayoutClientLogic";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// 🌟 [추가] 네이버/구글 검색 노출 및 OpenGraph 메타 데이터 설정
+// 🌟 네이버/구글 검색 노출 최적화(SEO) 및 타겟 키워드 메타 데이터
 export const metadata: Metadata = {
   title: '네이버 플레이스 순위 확인 | 플레이스 파트너',
   description: '소상공인을 위한 네이버 플레이스 실시간 순위 확인 및 마케팅 솔루션. 내 업체 지도의 상위노출 순위를 조회하고 효과적으로 관리하세요.',
