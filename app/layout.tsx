@@ -1,6 +1,5 @@
 // 파일 경로: app/layout.tsx
-// 역할: 서버 단에서 접속 도메인(admin.placepartner.cloud)을 감지하고 Next.js 최신 비동기 headers() 대응
-
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -8,13 +7,37 @@ import LayoutClientLogic from "./LayoutClientLogic";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// 🌟 [핵심] Next.js 15/16+ 대응: RootLayout 컴포넌트를 async 함수로 변경
+// 🌟 [추가] 네이버/구글 검색 노출 및 OpenGraph 메타 데이터 설정
+export const metadata: Metadata = {
+  title: '네이버 플레이스 순위 확인 | 플레이스 파트너',
+  description: '소상공인을 위한 네이버 플레이스 실시간 순위 확인 및 마케팅 솔루션. 내 업체 지도의 상위노출 순위를 조회하고 효과적으로 관리하세요.',
+  keywords: [
+    '네이버 플레이스 상위노출',
+    '플레이스 상위노출',
+    '플레이스 마케팅',
+    '플레이스 파트너',
+    '네이버 플레이스 순위 확인',
+    '내업체 순위 확인'
+  ],
+  openGraph: {
+    title: '네이버 플레이스 순위 확인 | 플레이스 파트너',
+    description: '소상공인을 위한 네이버 플레이스 실시간 순위 확인 및 마케팅 솔루션',
+    url: 'https://rank.placepartner.cloud',
+    siteName: '플레이스 파트너',
+    locale: 'ko_KR',
+    type: 'website',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // 🌟 [핵심] headers() 함수 호출 앞에 await 추가 (TS2339 에러 원천 차단)
   const headersList = await headers();
   const host = headersList.get("host") || "";
   const isAdminDomain = host.startsWith("admin.");
@@ -25,7 +48,6 @@ export default async function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
       </head>
       <body className={`${inter.className} bg-place-partner antialiased`}>
-        {/* 클라이언트 권한 검증 및 모바일 차단 로직 컴포넌트 호출 */}
         <LayoutClientLogic isAdminDomain={isAdminDomain}>
           {children}
         </LayoutClientLogic>
