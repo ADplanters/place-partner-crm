@@ -76,8 +76,10 @@ export default async function RootLayout({
   return (
     <html lang="ko">
       <head>
-        {/* Viewport 등 필수 태그만 유지 */}
+        {/* Viewport 등 필수 태그 유지 */}
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+        {/* FontAwesome 아이콘 스타일시트 글로벌 연결 */}
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         {/* 파비콘 및 타이틀은 generateMetadata에서 자동 삽입 */}
       </head>
       <body className={`${inter.className} bg-place-partner antialiased`}>
