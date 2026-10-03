@@ -104,7 +104,11 @@ export default function RankCheckPage() {
       return;
     }
 
-    if (!formData.placeUrl.includes("naver.com")) {
+    // 🌟 [수정 포인트] naver.com(긴 주소) 및 naver.me(모바일 공유 단축 주소) 모두 허용
+    const cleanUrl = formData.placeUrl.trim();
+    const isValidUrl = cleanUrl.includes("naver.com") || cleanUrl.includes("naver.me");
+
+    if (!isValidUrl) {
       setErrors({ ...errors, placeUrl: "올바른 네이버 플레이스 URL을 입력해주세요." });
       return;
     }
@@ -117,7 +121,7 @@ export default function RankCheckPage() {
       await addDoc(collection(db, "leads"), {
         name: formData.name,
         phone: formData.phone.replace(/-/g, ""),
-        placeUrl: formData.placeUrl,
+        placeUrl: cleanUrl,
         keyword: formData.keyword,
         status: "신규 접수",
         createdAt: serverTimestamp(),
@@ -227,7 +231,7 @@ export default function RankCheckPage() {
                     name="placeUrl"
                     value={formData.placeUrl}
                     onChange={handleChange}
-                    placeholder="https://m.place.naver.com/..."
+                    placeholder="https://naver.me/... 또는 https://m.place.naver.com/..."
                     className={`w-full pl-10 pr-4 py-3 rounded-xl border text-xs font-medium bg-gray-50 focus:bg-white outline-none transition-all ${
                       errors.placeUrl
                         ? "border-red-500 focus:ring-red-500"
@@ -310,7 +314,7 @@ export default function RankCheckPage() {
               </div>
             </div>
 
-            {/* 진단 순위 리포트 박스 (오타 수정 위치) */}
+            {/* 진단 순위 리포트 박스 */}
             <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 text-center">
               <div className="text-xs font-bold text-gray-500 mb-1">
                 [{formData.keyword}] 키워드 통합 검색
