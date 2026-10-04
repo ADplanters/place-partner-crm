@@ -195,10 +195,11 @@ export default function RankCheckPage() {
 
   // 🌟 동적으로 출력될 노출 상태 텍스트 계산
   const getRankStatusText = () => {
-    if (rankResult.rank > 0 && rankResult.page === 1) return { text: "1페이지 노출 중 (우수)", color: "text-blue-600 bg-blue-50" };
-    if (rankResult.rank > 0 && rankResult.page === 2) return { text: "2페이지 노출 중 (양호)", color: "text-emerald-600 bg-emerald-50" };
-    if (rankResult.rank > 0) return { text: `${rankResult.page}페이지 노출 중 (개선 필요)`, color: "text-orange-600 bg-orange-50" };
-    return { text: "1~3페이지 미노출 / 최적화 시급", color: "text-red-500 bg-red-50" };
+    if (rankResult.rank > 0 && rankResult.rank <= 15) return { text: "상위 노출 중 (우수)", color: "text-blue-600 bg-blue-50" };
+    if (rankResult.rank > 15 && rankResult.rank <= 50) return { text: "노출 중 (순위 상승 필요)", color: "text-emerald-600 bg-emerald-50" };
+    if (rankResult.rank > 50) return { text: "하위 노출 중 (개선 시급)", color: "text-orange-600 bg-orange-50" };
+    
+    return { text: "검색 결과 미노출 / 최적화 시급", color: "text-red-500 bg-red-50" };
   };
 
   const statusInfo = getRankStatusText();
@@ -357,7 +358,6 @@ export default function RankCheckPage() {
               </div>
               <div className="flex justify-between items-center text-xs border-t border-gray-200/60 pt-2">
                 <span className="font-bold text-gray-500">현재 노출 상태</span>
-                {/* 🌟 동적 노출 상태 표시 */}
                 <span className={`font-bold px-2 py-0.5 rounded ${statusInfo.color}`}>
                   {statusInfo.text}
                 </span>
@@ -371,19 +371,19 @@ export default function RankCheckPage() {
               </div>
               <div className="text-3xl font-black text-gray-900 my-2">
                 추정 순위:{" "}
-                {/* 🌟 실제 조회된 순위 동적 렌더링 */}
-                <span className={rankResult.rank > 0 && rankResult.rank <= 20 ? "text-blue-600" : "text-red-600"}>
-                  {rankResult.rank > 0 ? `현재 ${rankResult.rank}위` : "순위권 밖 (60위 이하)"}
+                {/* 🌟 실제 순위에 따라 "정확히 X위" 또는 "순위권 밖" 렌더링 */}
+                <span className={rankResult.rank > 0 && rankResult.rank <= 30 ? "text-blue-600" : "text-red-600"}>
+                  {rankResult.rank > 0 ? `정확히 ${rankResult.rank}위` : "순위권 밖"}
                 </span>
               </div>
-              
-              {/* 🌟 순위에 따른 맞춤형 분석 메시지 동적 렌더링 */}
               <p className="text-xs font-medium text-gray-600 leading-relaxed mt-2">
-                {rankResult.rank > 0 && rankResult.rank <= 20 
-                  ? "현재 1페이지 상위에 성공적으로 노출되고 있습니다! 유지 관리에 집중하세요."
-                  : rankResult.rank > 20 && rankResult.rank <= 60
-                  ? "플레이스 기본 세팅은 되어있으나 상단 진입을 위한 트래픽 최적화가 필요합니다."
-                  : "현재 플레이스 세팅 지수가 낮아 타겟 키워드 검색 시 노출에 어려움을 겪고 있습니다."}
+                {rankResult.rank > 0 && rankResult.rank <= 10 
+                  ? "현재 최상단에 성공적으로 노출 중입니다! 트래픽 방어와 관리에 집중하세요."
+                  : rankResult.rank > 10 && rankResult.rank <= 50
+                  ? "기본 노출은 되고 있으나, 상위권(1페이지) 진입을 위한 트래픽 최적화가 필요합니다."
+                  : rankResult.rank > 50 
+                  ? "하위권에 노출되고 있습니다. 노출 상승을 위한 최적화 작업이 시급합니다."
+                  : "현재 수백 개의 경쟁 업체들 중 검색 결과에 노출되지 않고 있어 최적화가 시급합니다."}
               </p>
             </div>
 
@@ -395,7 +395,7 @@ export default function RankCheckPage() {
               <p className="text-xs font-medium text-gray-600 leading-relaxed mb-3">
                 상세한 순위 진단 수치 분석과 1페이지 진입을 위한 광고/최적화 가이드는{" "}
                 <span className="font-bold text-gray-900">
-                  담당 디렉터가 순차적으로 [{formData.phone}] 번호로 직접 안내
+                  담당 디렉터가 10분 내로 [{formData.phone}] 번호로 직접 안내
                 </span>
                 해 드릴 예정입니다.
               </p>
