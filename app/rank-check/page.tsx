@@ -33,6 +33,9 @@ export default function RankCheckPage() {
   const [step, setStep] = useState<"form" | "analyzing" | "result">("form");
   const [loadingText, setLoadingText] = useState("네이버 플레이스 데이터 수집 중...");
 
+  // 🌟 실제 조회된 랭킹 데이터를 담을 State 추가
+  const [rankResult, setRankResult] = useState({ rank: 0, page: 0 });
+
   // 구글 폼 Action URL (구글 시트 연동용)
   const GOOGLE_FORM_ACTION_URL =
     "https://docs.google.com/forms/d/e/1FAIpQLSdtOM69wEU4GISZ72FUbvgeuusPNb5QEArb8h1R9SY76y7iFw/formResponse";
@@ -134,28 +137,45 @@ export default function RankCheckPage() {
     gFormData.append("entry.132328861", "없음 / 없음 / 없음"); // 마케팅 경험
 
     try {
-      // 3. 구글 시트로 데이터 송출
+      // 3. 구글 시트로 데이터 송출 (비동기)
       fetch(GOOGLE_FORM_ACTION_URL, {
         method: "POST",
         mode: "no-cors",
         body: gFormData,
       }).catch((err) => console.error("구글 폼 전송 에러:", err));
 
-      // 4. 파이어베이스 DB 저장
-      await addDoc(collection(db, "leads"), {
+      // 4. 파이어베이스 DB 저장 (비동기)
+      addDoc(collection(db, "leads"), {
         name: formData.name,
         phone: formData.phone.replace(/-/g, ""),
         placeUrl: cleanUrl,
         keyword: formData.keyword,
         status: "신규 접수",
         createdAt: serverTimestamp(),
+      }).catch((error) => console.error("데이터 저장 실패:", error));
+
+      // 🌟 5. 실제 네이버 플레이스 순위 조회 API 호출
+      setLoadingText("실시간 키워드 노출 순위 추출 중...");
+      
+      const res = await fetch("/api/check-rank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword: formData.keyword, placeUrl: cleanUrl })
       });
+      
+      const data = await res.json();
+      setRankResult({ rank: data.rank, page: data.page });
+      
     } catch (error) {
-      console.error("데이터 저장 실패:", error);
+      console.error("순위 조회 처리 중 오류:", error);
+      setRankResult({ rank: 0, page: 0 }); // 오류 발생 시 기본값 (순위권 밖) 처리
+    } finally {
+      // 모든 처리가 완료되면 결과 화면으로 전환
+      setStep("result");
     }
   };
 
-  // 분석 애니메이션 텍스트 연출 후 결과 화면으로 전환
+  // 분석 애니메이션 연출 (API 로딩이 너무 빠를 경우를 대비한 최소 로딩 시간)
   useEffect(() => {
     if (step === "analyzing") {
       const timer1 = setTimeout(() => {
@@ -166,17 +186,22 @@ export default function RankCheckPage() {
         setLoadingText("순위 및 최적화 점수 리포트 생성 중...");
       }, 2000);
 
-      const timer3 = setTimeout(() => {
-        setStep("result");
-      }, 3000);
-
       return () => {
         clearTimeout(timer1);
         clearTimeout(timer2);
-        clearTimeout(timer3);
       };
     }
   }, [step]);
+
+  // 🌟 동적으로 출력될 노출 상태 텍스트 계산
+  const getRankStatusText = () => {
+    if (rankResult.rank > 0 && rankResult.page === 1) return { text: "1페이지 노출 중 (우수)", color: "text-blue-600 bg-blue-50" };
+    if (rankResult.rank > 0 && rankResult.page === 2) return { text: "2페이지 노출 중 (양호)", color: "text-emerald-600 bg-emerald-50" };
+    if (rankResult.rank > 0) return { text: `${rankResult.page}페이지 노출 중 (개선 필요)`, color: "text-orange-600 bg-orange-50" };
+    return { text: "1~3페이지 미노출 / 최적화 시급", color: "text-red-500 bg-red-50" };
+  };
+
+  const statusInfo = getRankStatusText();
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] py-12 px-4 flex flex-col items-center justify-center">
@@ -332,8 +357,9 @@ export default function RankCheckPage() {
               </div>
               <div className="flex justify-between items-center text-xs border-t border-gray-200/60 pt-2">
                 <span className="font-bold text-gray-500">현재 노출 상태</span>
-                <span className="font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">
-                  1페이지 미노출 / 최적화 시급
+                {/* 🌟 동적 노출 상태 표시 */}
+                <span className={`font-bold px-2 py-0.5 rounded ${statusInfo.color}`}>
+                  {statusInfo.text}
                 </span>
               </div>
             </div>
@@ -344,10 +370,20 @@ export default function RankCheckPage() {
                 [{formData.keyword}] 키워드 통합 검색
               </div>
               <div className="text-3xl font-black text-gray-900 my-2">
-                추정 순위: <span className="text-red-600">순위권 밖 (3페이지 이하)</span>
+                추정 순위:{" "}
+                {/* 🌟 실제 조회된 순위 동적 렌더링 */}
+                <span className={rankResult.rank > 0 && rankResult.rank <= 20 ? "text-blue-600" : "text-red-600"}>
+                  {rankResult.rank > 0 ? `현재 ${rankResult.rank}위` : "순위권 밖 (60위 이하)"}
+                </span>
               </div>
+              
+              {/* 🌟 순위에 따른 맞춤형 분석 메시지 동적 렌더링 */}
               <p className="text-xs font-medium text-gray-600 leading-relaxed mt-2">
-                현재 플레이스 세팅 지수가 낮아 타겟 키워드 검색 시 상위 노출에 어려움을 겪고 있습니다.
+                {rankResult.rank > 0 && rankResult.rank <= 20 
+                  ? "현재 1페이지 상위에 성공적으로 노출되고 있습니다! 유지 관리에 집중하세요."
+                  : rankResult.rank > 20 && rankResult.rank <= 60
+                  ? "플레이스 기본 세팅은 되어있으나 상단 진입을 위한 트래픽 최적화가 필요합니다."
+                  : "현재 플레이스 세팅 지수가 낮아 타겟 키워드 검색 시 노출에 어려움을 겪고 있습니다."}
               </p>
             </div>
 
@@ -372,6 +408,7 @@ export default function RankCheckPage() {
               onClick={() => {
                 setStep("form");
                 setFormData({ name: "", phone: "", placeUrl: "", keyword: "" });
+                setRankResult({ rank: 0, page: 0 }); // 순위 초기화
               }}
               className="w-full py-3.5 rounded-xl font-bold text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all flex items-center justify-center gap-1.5"
             >
