@@ -33,7 +33,11 @@ export default function RankCheckPage() {
   const [step, setStep] = useState<"form" | "analyzing" | "result">("form");
   const [loadingText, setLoadingText] = useState("네이버 플레이스 데이터 수집 중...");
 
-  // 연락처 유효성 검사 (010 시작, 11자리, 단순/연속 번호 방지)
+  // 구글 폼 Action URL (구글 시트 연동용)
+  const GOOGLE_FORM_ACTION_URL =
+    "https://docs.google.com/forms/d/e/1FAIpQLSdtOM69wEU4GISZ72FUbvgeuusPNb5QEArb8h1R9SY76y7iFw/formResponse";
+
+  // 연락처 유효성 검사
   const validatePhone = (phone: string) => {
     const numbersOnly = phone.replace(/[^0-9]/g, "");
 
@@ -104,7 +108,6 @@ export default function RankCheckPage() {
       return;
     }
 
-    // 🌟 [수정 포인트] naver.com(긴 주소) 및 naver.me(모바일 공유 단축 주소) 모두 허용
     const cleanUrl = formData.placeUrl.trim();
     const isValidUrl = cleanUrl.includes("naver.com") || cleanUrl.includes("naver.me");
 
@@ -116,8 +119,29 @@ export default function RankCheckPage() {
     // 1. 분석 스캐닝 화면 전환
     setStep("analyzing");
 
+    // 2. 구글 스프레드시트로 전송할 데이터 생성 (기존 시트의 entry. 번호 매핑)
+    const gFormData = new FormData();
+    gFormData.append("entry.228206006", formData.name); // 성함
+    gFormData.append("entry.1632427674", formData.phone); // 연락처
+    gFormData.append("entry.314740078", cleanUrl); // 플레이스 URL
+    gFormData.append("entry.1348325892", `[순위진단 요청] ${formData.keyword}`); // 고민/키워드 열로 전달
+
+    // 구글 폼 기본 필수값 더미 세팅
+    gFormData.append("entry.115571470", "순위진단 신청자"); // 업종
+    gFormData.append("entry.2073529105", "미확인"); // 오픈시기
+    gFormData.append("entry.465019058", "없음"); // 인스타
+    gFormData.append("entry.661813118", "없음"); // 유튜브
+    gFormData.append("entry.132328861", "없음 / 없음 / 없음"); // 마케팅 경험
+
     try {
-      // DB 저장
+      // 3. 구글 시트로 데이터 송출
+      fetch(GOOGLE_FORM_ACTION_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: gFormData,
+      }).catch((err) => console.error("구글 폼 전송 에러:", err));
+
+      // 4. 파이어베이스 DB 저장
       await addDoc(collection(db, "leads"), {
         name: formData.name,
         phone: formData.phone.replace(/-/g, ""),
