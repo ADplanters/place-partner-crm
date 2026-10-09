@@ -1,0 +1,3 @@
+[submodule "public/reports"]
+	path = public/reports
+	url = https://github.com/stackover-dev/Looker-Studio.git
