@@ -22,10 +22,11 @@ import {
   Menu,
   X,
   Database,
+  BarChart3, // 🟢 보고서 아이콘 추가
 } from "lucide-react";
 
 interface SidebarProps {
-  currentMenu: "dashboard" | "schedule" | "sales" | "contracts" | "forms" | "education" | "team" | "leads";
+  currentMenu: "dashboard" | "schedule" | "sales" | "contracts" | "forms" | "education" | "team" | "leads" | "reports"; // 🟢 "reports" 타입 추가
 }
 
 export default function Sidebar({ currentMenu }: SidebarProps) {
@@ -127,6 +128,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
     { key: "dashboard", label: "대시보드", icon: LayoutDashboard, path: "/dashboard" },
     { key: "schedule", label: "통합 일정", icon: Calendar, path: "/schedule" },
     { key: "sales", label: "영업 결과 관리", icon: PhoneCall, path: "/sales" },
+    { key: "reports", label: "고객사 보고서 관리", icon: BarChart3, path: "/reports" }, // 🟢 고객사 보고서 관리 메뉴 추가
     { key: "contracts", label: "계약 관리", icon: FileText, path: "/contracts" },
     { key: "forms", label: "서식 모음", icon: Folder, path: "/forms" },
     { key: "education", label: "교육 자료", icon: GraduationCap, path: "/education" },
