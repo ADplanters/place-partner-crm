@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Sidebar from "../components/Sidebar";
-import { auth, db } from "../../../firebase";
+import Sidebar from "@/app/components/Sidebar";
+import { auth, db } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Sidebar from "../components/Sidebar";
+import Sidebar from "@/app/components/Sidebar";
 import { ExternalLink, Copy, Check, BarChart3, Search } from "lucide-react";
 
 // 고객사 보고서 목록

@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar"; // 사이드바 컴포넌트 불러오기
+import Sidebar from "@/app/components/Sidebar"; // 사이드바 컴포넌트 불러오기
 import { auth, db } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";

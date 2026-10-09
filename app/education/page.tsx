@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Sidebar from "../components/Sidebar"; // 사이드바 컴포넌트 불러오기
+import Sidebar from "@/app/components/Sidebar"; // 사이드바 컴포넌트 불러오기
 import { GraduationCap, BookOpen, Video, FileCheck, ExternalLink } from "lucide-react";
 
 interface EduItem {

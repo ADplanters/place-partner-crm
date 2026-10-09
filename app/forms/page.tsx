@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Sidebar from "../components/Sidebar";
+import Sidebar from "@/app/components/Sidebar";
 import { FolderOpen, Download, Plus, Search, FileText, X } from "lucide-react";
 
 interface FormItem {
