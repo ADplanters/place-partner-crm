@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "../../firebase";
+import { auth, db } from "@/firebase";
 import { doc, getDoc, collection, getDocs, query, where, limit } from "firebase/firestore";
 import {
   Moon,
