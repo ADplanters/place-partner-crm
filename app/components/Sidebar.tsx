@@ -22,11 +22,11 @@ import {
   Menu,
   X,
   Database,
-  BarChart3, // 🟢 보고서 아이콘 추가
+  BarChart3,
 } from "lucide-react";
 
 interface SidebarProps {
-  currentMenu: "dashboard" | "schedule" | "sales" | "contracts" | "forms" | "education" | "team" | "leads" | "reports"; // 🟢 "reports" 타입 추가
+  currentMenu: "dashboard" | "schedule" | "sales" | "contracts" | "forms" | "education" | "team" | "leads" | "reports";
 }
 
 export default function Sidebar({ currentMenu }: SidebarProps) {
@@ -128,7 +128,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
     { key: "dashboard", label: "대시보드", icon: LayoutDashboard, path: "/dashboard" },
     { key: "schedule", label: "통합 일정", icon: Calendar, path: "/schedule" },
     { key: "sales", label: "영업 결과 관리", icon: PhoneCall, path: "/sales" },
-    { key: "reports", label: "고객사 보고서 관리", icon: BarChart3, path: "/reports" }, // 🟢 고객사 보고서 관리 메뉴 추가
+    { key: "reports", label: "고객사 보고서 관리", icon: BarChart3, path: "/reports" },
     { key: "contracts", label: "계약 관리", icon: FileText, path: "/contracts" },
     { key: "forms", label: "서식 모음", icon: Folder, path: "/forms" },
     { key: "education", label: "교육 자료", icon: GraduationCap, path: "/education" },
@@ -144,6 +144,9 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
       ]
     : baseMenuItems;
 
+  const adplantersLogoUrl =
+    "https://rawcdn.githack.com/ADplanters/public/636af685a6d14d8a101a67aa27c51081bc6bf693/image_to_pdf/%EC%95%A0%EB%93%9C%ED%94%8C%EB%9E%9C%ED%84%B0%EC%8A%A4-%EB%A1%9C%EA%B3%A0_PNG.png?raw=true";
+
   return (
     <>
       {/* 🌟 모바일 전용 상단 헤더 바 */}
@@ -154,14 +157,23 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
       >
         <div
           onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-1.5 cursor-pointer"
+          className="flex flex-col gap-0.5 cursor-pointer hover:opacity-80 transition-opacity"
         >
-          <span className="text-2xl font-black text-red-600 relative top-0.5 leading-[0]">*</span>
-          <span className="text-lg font-black text-red-600 tracking-tight">PLACE PARTNER</span>
+          {/* 상단 ADplanters 로고 */}
+          <img
+            src={adplantersLogoUrl}
+            alt="ADplanters Logo"
+            className="h-4 w-auto object-contain self-start"
+          />
+          {/* 하단 PLACE PARTNER 로고 */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xl font-black text-red-600 relative top-0.5 leading-[0]">*</span>
+            <span className="text-base font-black text-red-600 tracking-tight">PLACE PARTNER</span>
+          </div>
         </div>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`p-1.5 focus:outline-none ${isDarkMode ? "text-gray-200" : "text-gray-600"}`}
+          className={`p-1.5 focus:outline-none cursor-pointer ${isDarkMode ? "text-gray-200" : "text-gray-600"}`}
         >
           {isOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -170,7 +182,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
       {/* 🌟 모바일 메뉴 열림 시 불투명 백드롭 */}
       {isOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
+          className="md:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm cursor-pointer"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -182,17 +194,27 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
         } ${isDarkMode ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-100 text-gray-900"}`}
       >
         <div>
-          {/* 로고 */}
+          {/* 로고 영역 (ADplanters 상단 배치 + PLACE PARTNER 하단 배치) */}
           <div
             onClick={() => {
               setIsOpen(false);
               router.push("/dashboard");
             }}
-            className="flex items-center gap-1.5 mb-10 cursor-pointer hover:opacity-80 transition-opacity"
+            className="flex flex-col gap-1.5 mb-8 cursor-pointer hover:opacity-80 transition-opacity"
             title="대시보드 홈으로 이동"
           >
-            <span className="text-3xl font-black text-red-600 relative top-1 leading-[0]">*</span>
-            <span className="text-xl font-black text-red-600 tracking-tight">PLACE PARTNER</span>
+            {/* 1. 상단 ADplanters 로고 */}
+            <img
+              src={adplantersLogoUrl}
+              alt="ADplanters Logo"
+              className="h-6 w-auto object-contain self-start"
+            />
+
+            {/* 2. 하단 PLACE PARTNER 로고 */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-3xl font-black text-red-600 relative top-1 leading-[0]">*</span>
+              <span className="text-xl font-black text-red-600 tracking-tight">PLACE PARTNER</span>
+            </div>
           </div>
 
           <nav className="space-y-1">
@@ -206,7 +228,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
                     setIsOpen(false);
                     router.push(item.path);
                   }}
-                  className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all ${
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all cursor-pointer ${
                     isActive
                       ? "bg-blue-50 text-blue-600 shadow-sm"
                       : isDarkMode
@@ -231,7 +253,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2.5 rounded-full transition-all ${
+              className={`p-2.5 rounded-full transition-all cursor-pointer ${
                 isDarkMode ? "bg-gray-700 text-yellow-400" : "bg-gray-100 text-gray-600"
               }`}
             >
@@ -240,7 +262,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
 
             <button
               onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-              className={`relative p-2.5 rounded-full transition-all ${
+              className={`relative p-2.5 rounded-full transition-all cursor-pointer ${
                 isDarkMode ? "bg-gray-700 text-gray-200" : "bg-gray-100 text-gray-600"
               }`}
             >
@@ -254,7 +276,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
               href="https://cafe.naver.com/bluebottlefollower"
               target="_blank"
               rel="noopener noreferrer"
-              className={`p-2.5 rounded-full transition-all flex items-center justify-center ${
+              className={`p-2.5 rounded-full transition-all flex items-center justify-center cursor-pointer ${
                 isDarkMode ? "bg-gray-700 text-green-400" : "bg-green-50 text-[#03C75A]"
               }`}
             >
@@ -267,7 +289,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
               href="https://www.adplanters.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className={`p-2.5 rounded-full transition-all ${
+              className={`p-2.5 rounded-full transition-all cursor-pointer ${
                 isDarkMode ? "bg-gray-700 text-blue-400" : "bg-blue-50 text-blue-600"
               }`}
             >
@@ -291,7 +313,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
                     </span>
                   )}
                 </div>
-                <button onClick={markAllAsRead} className="text-xs text-blue-500 hover:underline">
+                <button onClick={markAllAsRead} className="text-xs text-blue-500 hover:underline cursor-pointer">
                   모두 읽음
                 </button>
               </div>
@@ -337,7 +359,7 @@ export default function Sidebar({ currentMenu }: SidebarProps) {
                 <div className="text-[10px] text-gray-400">{userTeam}</div>
               </div>
             </div>
-            <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 transition-colors">
+            <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer">
               <LogOut size={16} />
             </button>
           </div>
