@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "@/app/components/Sidebar";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/firebase";q
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
 import {
