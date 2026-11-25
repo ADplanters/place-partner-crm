@@ -1,27 +1,140 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Sidebar from "@/app/components/Sidebar";
-import { ExternalLink, Copy, Check, BarChart3, Search, Settings } from "lucide-react";
+import {
+  ExternalLink,
+  Copy,
+  Check,
+  BarChart3,
+  Search,
+  Settings,
+  ChevronDown,
+  X,
+  Building2,
+} from "lucide-react";
 
-// 고객사 보고서 목록
-const clientReports = [
+interface ClientReport {
+  id: string;
+  name: string;
+  fileName: string;
+}
+
+// 고객사 보고서 목록 (신규 3곳 포함 - 실제 생성한 .html 파일명과 다르면 fileName만 수정하세요)
+const clientReports: ClientReport[] = [
   { id: "coway-perfectmall", name: "코웨이 퍼펙트몰", fileName: "coway-perfectmall.html" },
   { id: "photopot", name: "포토팟", fileName: "photopot.html" },
   { id: "Lumy", name: "루미", fileName: "Lumy.html" },
   { id: "jungwonyong", name: "정원용", fileName: "jungwonyong.html" },
   { id: "noahuniversecompany", name: "노아유니버스컴퍼니", fileName: "noahuniversecompany.html" },
   { id: "gyesog", name: "계속", fileName: "gyesog.html" },
+  { id: "boseong-bluetour", name: "보성블루투어 주식회사", fileName: "boseong-bluetour.html" },
+  { id: "enableu", name: "이네이블유", fileName: "enableu.html" },
+  { id: "simji", name: "심지", fileName: "simji.html" },
 ];
 
+// 검색어 정규식 특수문자 이스케이프 헬퍼
+function escapeRegExp(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export default function ReportsPage() {
-  const [selectedReport, setSelectedReport] = useState(clientReports[0]);
+  const [selectedReport, setSelectedReport] = useState<ClientReport>(clientReports[0]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [copied, setCopied] = useState(false);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const liveUrl = `https://stackover-dev.github.io/Looker-Studio/${selectedReport.fileName}`;
   // 관제탑 admin/index.html 경로
   const adminControlTowerUrl = `https://stackover-dev.github.io/Looker-Studio/admin/index.html`;
+
+  // 실시간 자동 필터링 (고객명 + 파일명 모두 검색 지원)
+  const filteredReports = clientReports.filter((report) => {
+    const keyword = searchTerm.trim().toLowerCase();
+    if (!keyword) return true;
+    return (
+      report.name.toLowerCase().includes(keyword) ||
+      report.fileName.toLowerCase().includes(keyword)
+    );
+  });
+
+  // 드롭다운 외부 클릭 시 자동 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+        setSearchTerm("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // 검색어 변경 시 키보드 하이라이트 인덱스 초기화
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [searchTerm, isDropdownOpen]);
+
+  const handleSelectReport = (report: ClientReport) => {
+    setSelectedReport(report);
+    setIsDropdownOpen(false);
+    setSearchTerm("");
+    inputRef.current?.blur();
+  };
+
+  const handleOpenDropdown = () => {
+    setIsDropdownOpen(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+  };
+
+  const handleToggleDropdown = () => {
+    if (isDropdownOpen) {
+      setIsDropdownOpen(false);
+      setSearchTerm("");
+      inputRef.current?.blur();
+    } else {
+      handleOpenDropdown();
+    }
+  };
+
+  // 키보드 탐색 (↑, ↓, Enter, Esc)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isDropdownOpen) {
+      if (e.key === "ArrowDown" || e.key === "Enter") {
+        e.preventDefault();
+        setIsDropdownOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (filteredReports.length > 0) {
+        setHighlightedIndex((prev) => (prev + 1) % filteredReports.length);
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (filteredReports.length > 0) {
+        setHighlightedIndex((prev) => (prev - 1 + filteredReports.length) % filteredReports.length);
+      }
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (filteredReports[highlightedIndex]) {
+        handleSelectReport(filteredReports[highlightedIndex]);
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setIsDropdownOpen(false);
+      setSearchTerm("");
+      inputRef.current?.blur();
+    }
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(liveUrl);
@@ -29,11 +142,25 @@ export default function ReportsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const filteredReports = clientReports.filter(
-    (report) =>
-      report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.fileName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // 검색어 일치 텍스트 하이라이트 렌더링
+  const renderHighlightedText = (text: string, query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return text;
+    const regex = new RegExp(`(${escapeRegExp(trimmed)})`, "gi");
+    const parts = text.split(regex);
+    return parts.map((part, idx) =>
+      part.toLowerCase() === trimmed.toLowerCase() ? (
+        <span
+          key={idx}
+          className="bg-blue-100 dark:bg-blue-500/30 text-blue-700 dark:text-blue-200 rounded px-0.5 font-extrabold"
+        >
+          {part}
+        </span>
+      ) : (
+        <React.Fragment key={idx}>{part}</React.Fragment>
+      )
+    );
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -57,8 +184,13 @@ export default function ReportsPage() {
               </p>
             </div>
 
-            {/* 관제탑 관리자 이동 버튼 & 검색창 */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+            {/* 우측 등록 고객사 수 배지 & 관제탑 관리자 버튼 */}
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-start md:justify-end">
+              <span className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800/60 rounded-xl whitespace-nowrap">
+                <Building2 size={14} />
+                등록 고객사 {clientReports.length}곳
+              </span>
+
               {/* 대행사 관제탑 데이터 관리자 접속 버튼 */}
               <a
                 href={adminControlTowerUrl}
@@ -69,39 +201,165 @@ export default function ReportsPage() {
                 <Settings size={15} className="text-amber-400" />
                 <span>관제탑 데이터 관리자 ⚙️</span>
               </a>
-
-              {/* 검색창 */}
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="고객사 검색..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
-                />
-              </div>
             </div>
           </div>
 
-          {/* 고객사 탭 선택 영역 */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-            {filteredReports.map((report) => {
-              const isSelected = selectedReport.id === report.id;
-              return (
-                <button
-                  key={report.id}
-                  onClick={() => setSelectedReport(report)}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
-                    isSelected
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                      : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+          {/* 검색 자동 필터링 고객사 선택 드롭다운 바 (Combobox) */}
+          <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <label
+                htmlFor="client-combobox-input"
+                className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap shrink-0"
+              >
+                고객사 선택
+              </label>
+
+              {/* 드롭다운 컨테이너 */}
+              <div ref={dropdownRef} className="relative flex-1 max-w-xl">
+                <div
+                  className={`flex items-center w-full bg-gray-50 dark:bg-gray-700/70 border rounded-xl transition-all ${
+                    isDropdownOpen
+                      ? "border-blue-500 ring-2 ring-blue-500/20 bg-white dark:bg-gray-800"
+                      : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                   }`}
                 >
-                  {report.name}
-                </button>
-              );
-            })}
+                  <Search
+                    className={`ml-3.5 shrink-0 transition-colors ${
+                      isDropdownOpen ? "text-blue-500" : "text-gray-400"
+                    }`}
+                    size={18}
+                  />
+
+                  <input
+                    id="client-combobox-input"
+                    ref={inputRef}
+                    type="text"
+                    role="combobox"
+                    aria-expanded={isDropdownOpen}
+                    aria-autocomplete="list"
+                    autoComplete="off"
+                    value={isDropdownOpen ? searchTerm : selectedReport.name}
+                    placeholder={`현재 선택: ${selectedReport.name} — 고객사명 입력으로 검색...`}
+                    onFocus={() => setIsDropdownOpen(true)}
+                    onClick={() => setIsDropdownOpen(true)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      if (!isDropdownOpen) setIsDropdownOpen(true);
+                    }}
+                    onKeyDown={handleKeyDown}
+                    className="w-full px-3 py-2.5 text-sm font-semibold bg-transparent focus:outline-none text-gray-900 dark:text-white placeholder:font-normal placeholder:text-gray-400 dark:placeholder:text-gray-400"
+                  />
+
+                  {/* 검색어 초기화 버튼 */}
+                  {isDropdownOpen && searchTerm && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSearchTerm("");
+                        inputRef.current?.focus();
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                      aria-label="검색어 지우기"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+
+                  {/* 드롭다운 열기/닫기 화살표 버튼 */}
+                  <button
+                    type="button"
+                    onClick={handleToggleDropdown}
+                    className="px-3 py-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 border-l border-gray-200/80 dark:border-gray-600/80 transition-colors"
+                    aria-label="고객사 목록 열기/닫기"
+                  >
+                    <ChevronDown
+                      size={18}
+                      className={`transition-transform duration-200 ${
+                        isDropdownOpen ? "rotate-180 text-blue-500" : ""
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* 드롭다운 자동 필터링 리스트 */}
+                {isDropdownOpen && (
+                  <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-40 overflow-hidden">
+                    <div className="px-3.5 py-2 bg-gray-50 dark:bg-gray-900/60 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                      <span>
+                        {searchTerm.trim()
+                          ? `"${searchTerm.trim()}" 검색 결과`
+                          : "전체 고객사 목록"}
+                      </span>
+                      <span>{filteredReports.length}건</span>
+                    </div>
+
+                    <ul
+                      role="listbox"
+                      className="max-h-72 overflow-y-auto py-1.5 divide-y divide-gray-100/70 dark:divide-gray-700/50"
+                    >
+                      {filteredReports.length > 0 ? (
+                        filteredReports.map((report, index) => {
+                          const isSelected = selectedReport.id === report.id;
+                          const isHighlighted = index === highlightedIndex;
+
+                          return (
+                            <li
+                              key={report.id}
+                              role="option"
+                              aria-selected={isSelected}
+                              onMouseEnter={() => setHighlightedIndex(index)}
+                              onMouseDown={(e) => {
+                                // blur보다 먼저 선택 이벤트 실행되도록 방지
+                                e.preventDefault();
+                                handleSelectReport(report);
+                              }}
+                              className={`px-4 py-2.5 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                                isSelected
+                                  ? "bg-blue-50/90 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                  : isHighlighted
+                                  ? "bg-gray-100 dark:bg-gray-700/70 text-gray-900 dark:text-white"
+                                  : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-bold truncate">
+                                  {renderHighlightedText(report.name, searchTerm)}
+                                </div>
+                                <div className="text-[11px] font-mono text-gray-400 dark:text-gray-400 truncate mt-0.5">
+                                  {renderHighlightedText(report.fileName, searchTerm)}
+                                </div>
+                              </div>
+
+                              {isSelected && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-600 text-white shrink-0">
+                                  <Check size={12} /> 선택됨
+                                </span>
+                              )}
+                            </li>
+                          );
+                        })
+                      ) : (
+                        <li className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                          <span className="font-semibold text-gray-600 dark:text-gray-300">
+                            "{searchTerm}"
+                          </span>
+                          에 해당하는 고객사가 없습니다.
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* 현재 선택된 고객사 파일명 배지 */}
+              <div className="hidden lg:flex items-center gap-2 ml-auto text-xs text-gray-500 dark:text-gray-400">
+                <span>현재 보고서:</span>
+                <span className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 font-bold text-gray-800 dark:text-gray-100">
+                  {selectedReport.name}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* 선택된 보고서 제어 및 미리보기 영역 */}
@@ -124,6 +382,7 @@ export default function ReportsPage() {
 
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <button
+                  type="button"
                   onClick={handleCopyLink}
                   className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
                 >
@@ -152,6 +411,7 @@ export default function ReportsPage() {
             {/* Iframe 미리보기 */}
             <div className="w-full h-[750px] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-900 relative">
               <iframe
+                key={selectedReport.id}
                 src={liveUrl}
                 className="w-full h-full border-0"
                 title={`${selectedReport.name} 보고서`}
