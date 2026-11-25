@@ -45,10 +45,11 @@ interface ContractItem {
 }
 
 const PRODUCT_OPTIONS = [
+  "메타 DR광고",
   "플레이스파트너 스탠다드",
   "플레이스파트너 VIP",
   "영상 제작",
-  "웹사이트",
+  "웹사이트 제작,
   "인플루언서 마케팅",
 ];
 
